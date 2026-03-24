@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unity 빌드 실행 툴</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <main class="container">
+      <h1>Unity 빌드 실행 툴</h1>
+
+      <div class="build-path-container">
+        <label for="build-path">빌드 경로:</label>
+        <input type="text" id="build-path" value="" readonly />
+        <button id="browse-path" class="btn-browse" title="폴더 선택">...</button>
+        <button id="refresh-all">새로고침</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="android">Android</button>
+        <button class="tab-btn" data-tab="ios">iOS</button>
+        <button class="tab-btn" data-tab="webgl">WebGL</button>
+      </div>
+
+      <!-- Android Tab -->
+      <div id="android" class="tab-content active">
+        <div class="section">
+          <h2>Android APK 설치</h2>
+
+          <div class="form-group">
+            <div class="card-section-header">
+              <label>연결된 디바이스:</label>
+              <button id="refresh-devices" class="btn-icon" title="디바이스 새로고침">↻</button>
+            </div>
+            <div id="device-grid" class="build-grid device-grid">
+              <div class="grid-placeholder">디바이스를 불러오는 중...</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="card-section-header">
+              <label>APK 선택:</label>
+              <button id="refresh-apks" class="btn-icon" title="APK 새로고침">↻</button>
+            </div>
+            <div id="apk-grid" class="build-grid">
+              <div class="grid-placeholder">APK 파일을 불러오는 중...</div>
+            </div>
+          </div>
+
+          <label class="toggle-row">
+            <div class="toggle-switch">
+              <input type="checkbox" id="launch-after-install" />
+              <span class="toggle-slider"></span>
+            </div>
+            <span class="toggle-label">설치 후 바로 실행</span>
+          </label>
+
+          <button id="install-apk" class="btn-primary">APK 설치</button>
+
+          <div id="install-progress-container" class="progress-container" style="display: none;">
+            <div class="progress-bar">
+              <div id="install-progress-bar" class="progress-fill"></div>
+            </div>
+            <div id="install-progress-text" class="progress-text">준비 중...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- iOS Tab -->
+      <div id="ios" class="tab-content">
+        <div class="section">
+          <h2>iOS Xcode 프로젝트</h2>
+
+          <div class="form-group">
+            <div class="card-section-header">
+              <label>프로젝트 선택:</label>
+              <button id="refresh-ios" class="btn-icon" title="프로젝트 새로고침">↻</button>
+            </div>
+            <div id="ios-grid" class="build-grid">
+              <div class="grid-placeholder">프로젝트를 불러오는 중...</div>
+            </div>
+          </div>
+
+          <button id="open-xcode" class="btn-primary">Xcode에서 열기</button>
+        </div>
+      </div>
+
+      <!-- WebGL Tab -->
+      <div id="webgl" class="tab-content">
+        <div class="section">
+          <h2>WebGL 로컬 서버</h2>
+
+          <div class="form-group">
+            <div class="card-section-header">
+              <label>빌드 선택:</label>
+              <button id="refresh-webgl" class="btn-icon" title="빌드 새로고침">↻</button>
+            </div>
+            <div id="webgl-grid" class="build-grid">
+              <div class="grid-placeholder">빌드를 불러오는 중...</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>포트:</label>
+            <input type="number" id="webgl-port" value="8080" min="1024" max="65535" />
+          </div>
+
+          <div class="button-row">
+            <button id="start-server" class="btn-primary">서버 시작</button>
+            <button id="stop-server" class="btn-secondary">서버 중지</button>
+          </div>
+
+          <div id="server-status" class="status-box"></div>
+        </div>
+      </div>
+
+      <div id="message" class="message"></div>
+    </main>
+
+    <!-- 폴더 생성 확인 모달 -->
+    <div id="folder-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h3>빌드 폴더 생성</h3>
+        <p id="modal-message"></p>
+        <div class="modal-buttons">
+          <button id="modal-cancel" class="btn-secondary">취소</button>
+          <button id="modal-confirm" class="btn-primary">생성</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

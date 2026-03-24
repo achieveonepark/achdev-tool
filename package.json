@@ -1,0 +1,27 @@
+{
+  "name": "unity-build-tool",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "node scripts/run-tauri.mjs",
+    "tauri:dev": "node scripts/run-tauri.mjs dev",
+    "tauri:build": "node scripts/run-tauri.mjs build",
+    "tauri:build:macos": "node scripts/run-tauri.mjs build --bundles app,dmg",
+    "tauri:build:windows": "node scripts/run-tauri.mjs build --bundles msi,nsis",
+    "tauri:build:windows:cross": "node scripts/run-tauri.mjs build --runner cargo-xwin --target x86_64-pc-windows-msvc"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-opener": "^2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3"
+  }
+}

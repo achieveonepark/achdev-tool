@@ -1,10 +1,28 @@
-# Unity 빌드 실행 툴
+# AchDev Tool
 
-Unity에서 만들어진 빌드를 빠르게 확인하고 실행하기 위한 Tauri 데스크톱 앱입니다.
+Unity 빌드 실행과 AI 개발 보조를 한곳에서 처리하는 Tauri 데스크톱 앱입니다.
+좌측 사이드바에서 **Build** / **AI** 카테고리를 전환하며 사용합니다.
 
-- Android APK를 연결된 기기에 설치
+## 기능
+
+### 🔨 Build
+
+- Android APK를 연결된 기기에 설치 (설치 후 자동 실행 옵션)
 - iOS Xcode 프로젝트를 바로 열기
 - WebGL 빌드를 로컬 서버로 실행
+
+빌드 경로를 한 번 지정하면 `Android` / `iOS` / `WebGL` 하위 폴더를 자동으로 스캔해
+앱 이름·아이콘과 함께 카드로 보여줍니다.
+
+### 🤖 AI
+
+- 설치된 AI CLI(`claude`, `opencode`, `codex`) 자동 감지
+- 폴더를 VSCode로 열면서, 통합 터미널에서 선택한 CLI를 자동 실행
+  (`.vscode/tasks.json`에 folderOpen 태스크를 병합하고 VSCode의
+  `task.allowAutomaticTasks`를 한 번 켜줍니다)
+- 각 도구의 설정 파일 열기 (없으면 생성)
+- 미설치 도구를 `npm i -g`로 설치
+- 도구별 MCP 서버 목록 확인 및 등록
 
 ## 개발 실행
 
@@ -15,10 +33,13 @@ npm run tauri:dev
 
 ## 바로 설치 파일 받기
 
-현재 저장소에는 바로 설치해볼 수 있는 빌드 결과도 함께 넣어두었습니다.
+저장소에 바로 설치해볼 수 있는 빌드 결과도 함께 넣어두었습니다.
 
-- macOS 설치 파일: [unity-build-tool-0.1.0-macos-arm64.dmg](./artifacts/unity-build-tool-0.1.0-macos-arm64.dmg)
-- Windows 설치 파일: [unity-build-tool-0.1.0-windows-x64-setup.exe](./artifacts/unity-build-tool-0.1.0-windows-x64-setup.exe)
+- macOS 설치 파일: [achdev-tool-0.1.0-macos-arm64.dmg](./artifacts/achdev-tool-0.1.0-macos-arm64.dmg)
+- Windows 설치 파일: [achdev-tool-0.1.0-windows-x64-setup.exe](./artifacts/achdev-tool-0.1.0-windows-x64-setup.exe)
+
+> 참고: 동봉된 Windows 설치 파일은 AI 카테고리가 추가되기 전 빌드입니다.
+> 최신 기능을 반영하려면 Windows에서 직접 다시 빌드하세요(아래 참고).
 
 ## 설치 파일 빌드
 
@@ -60,8 +81,8 @@ npm run tauri:build:macos
 
 생성 결과물:
 
-- `src-tauri/target/release/bundle/macos/Unity 빌드 실행 툴.app`
-- `src-tauri/target/release/bundle/dmg/Unity 빌드 실행 툴_<version>_<arch>.dmg`
+- `src-tauri/target/release/bundle/macos/AchDev Tool.app`
+- `src-tauri/target/release/bundle/dmg/AchDev Tool_<version>_<arch>.dmg`
 
 설치 방법:
 
@@ -121,6 +142,12 @@ npm run tauri:build:windows:cross
 - macOS DMG: `src-tauri/target/release/bundle/dmg/`
 - Windows MSI: `src-tauri/target/release/bundle/msi/`
 - Windows NSIS: `src-tauri/target/release/bundle/nsis/`
+
+## 테스트
+
+```bash
+cd src-tauri && cargo test
+```
 
 ## 서명 관련 참고
 

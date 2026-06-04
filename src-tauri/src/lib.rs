@@ -1,3 +1,5 @@
+mod ai;
+
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -1024,6 +1026,13 @@ pub fn run() {
             stop_webgl_server,
             get_webgl_server_status,
             get_platform,
+            ai::list_tools,
+            ai::has_code,
+            ai::open_config,
+            ai::install_tool,
+            ai::open_in_vscode,
+            ai::list_mcps,
+            ai::add_mcp,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

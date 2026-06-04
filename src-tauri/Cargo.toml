@@ -1,12 +1,12 @@
 [package]
-name = "unity-build-tool"
+name = "achdev-tool"
 version = "0.1.0"
-description = "Unity build execution tool"
+description = "AchDev Tool — Unity build runner and AI dev helper"
 authors = ["you"]
 edition = "2021"
 
 [lib]
-name = "unity_build_tool_lib"
+name = "achdev_tool_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -18,6 +18,10 @@ tauri-plugin-opener = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", features = ["process", "io-util"] }
 glob = "0.3"
+# AI category (absorbed from ai-helper): VSCode launch, config & MCP editing
+json5 = "0.4"
+toml_edit = "0.22"
+dirs = "5"

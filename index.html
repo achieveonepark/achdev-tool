@@ -4,121 +4,173 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Unity 빌드 실행 툴</title>
+    <title>AchDev Tool</title>
     <script type="module" src="/src/main.ts" defer></script>
   </head>
 
   <body>
-    <main class="container">
-      <h1>Unity 빌드 실행 툴</h1>
+    <div class="app">
+      <!-- Left category sidebar -->
+      <nav class="sidebar">
+        <div class="sidebar-title">Tools</div>
+        <button class="nav-btn active" data-view="build">
+          <span class="nav-icon">🔨</span><span class="nav-label">Build</span>
+        </button>
+        <button class="nav-btn" data-view="ai">
+          <span class="nav-icon">🤖</span><span class="nav-label">AI</span>
+        </button>
+      </nav>
 
-      <div class="build-path-container">
-        <label for="build-path">빌드 경로:</label>
-        <input type="text" id="build-path" value="" readonly />
-        <button id="browse-path" class="btn-browse" title="폴더 선택">...</button>
-        <button id="refresh-all">새로고침</button>
-      </div>
+      <!-- Main content area -->
+      <main class="content">
+        <!-- ── Build view ──────────────────────────────────────────────── -->
+        <section id="view-build" class="view active">
+          <h1>Unity 빌드</h1>
 
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="android">Android</button>
-        <button class="tab-btn" data-tab="ios">iOS</button>
-        <button class="tab-btn" data-tab="webgl">WebGL</button>
-      </div>
+          <div class="build-path-container">
+            <label for="build-path">빌드 경로:</label>
+            <input type="text" id="build-path" value="" readonly />
+            <button id="browse-path" class="btn-browse" title="폴더 선택">...</button>
+            <button id="refresh-all">새로고침</button>
+          </div>
 
-      <!-- Android Tab -->
-      <div id="android" class="tab-content active">
-        <div class="section">
-          <h2>Android APK 설치</h2>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="android">Android</button>
+            <button class="tab-btn" data-tab="ios">iOS</button>
+            <button class="tab-btn" data-tab="webgl">WebGL</button>
+          </div>
 
-          <div class="form-group">
-            <div class="card-section-header">
-              <label>연결된 디바이스:</label>
-              <button id="refresh-devices" class="btn-icon" title="디바이스 새로고침">↻</button>
-            </div>
-            <div id="device-grid" class="build-grid device-grid">
-              <div class="grid-placeholder">디바이스를 불러오는 중...</div>
+          <!-- Android Tab -->
+          <div id="android" class="tab-content active">
+            <div class="section">
+              <h2>Android APK 설치</h2>
+
+              <div class="form-group">
+                <div class="card-section-header">
+                  <label>연결된 디바이스:</label>
+                  <button id="refresh-devices" class="btn-icon" title="디바이스 새로고침">↻</button>
+                </div>
+                <div id="device-grid" class="build-grid device-grid">
+                  <div class="grid-placeholder">디바이스를 불러오는 중...</div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="card-section-header">
+                  <label>APK 선택:</label>
+                  <button id="refresh-apks" class="btn-icon" title="APK 새로고침">↻</button>
+                </div>
+                <div id="apk-grid" class="build-grid">
+                  <div class="grid-placeholder">APK 파일을 불러오는 중...</div>
+                </div>
+              </div>
+
+              <label class="toggle-row">
+                <div class="toggle-switch">
+                  <input type="checkbox" id="launch-after-install" />
+                  <span class="toggle-slider"></span>
+                </div>
+                <span class="toggle-label">설치 후 바로 실행</span>
+              </label>
+
+              <button id="install-apk" class="btn-primary">APK 설치</button>
+
+              <div id="install-progress-container" class="progress-container" style="display: none;">
+                <div class="progress-bar">
+                  <div id="install-progress-bar" class="progress-fill"></div>
+                </div>
+                <div id="install-progress-text" class="progress-text">준비 중...</div>
+              </div>
             </div>
           </div>
 
-          <div class="form-group">
-            <div class="card-section-header">
-              <label>APK 선택:</label>
-              <button id="refresh-apks" class="btn-icon" title="APK 새로고침">↻</button>
-            </div>
-            <div id="apk-grid" class="build-grid">
-              <div class="grid-placeholder">APK 파일을 불러오는 중...</div>
+          <!-- iOS Tab -->
+          <div id="ios" class="tab-content">
+            <div class="section">
+              <h2>iOS Xcode 프로젝트</h2>
+
+              <div class="form-group">
+                <div class="card-section-header">
+                  <label>프로젝트 선택:</label>
+                  <button id="refresh-ios" class="btn-icon" title="프로젝트 새로고침">↻</button>
+                </div>
+                <div id="ios-grid" class="build-grid">
+                  <div class="grid-placeholder">프로젝트를 불러오는 중...</div>
+                </div>
+              </div>
+
+              <button id="open-xcode" class="btn-primary">Xcode에서 열기</button>
             </div>
           </div>
 
-          <label class="toggle-row">
-            <div class="toggle-switch">
-              <input type="checkbox" id="launch-after-install" />
-              <span class="toggle-slider"></span>
+          <!-- WebGL Tab -->
+          <div id="webgl" class="tab-content">
+            <div class="section">
+              <h2>WebGL 로컬 서버</h2>
+
+              <div class="form-group">
+                <div class="card-section-header">
+                  <label>빌드 선택:</label>
+                  <button id="refresh-webgl" class="btn-icon" title="빌드 새로고침">↻</button>
+                </div>
+                <div id="webgl-grid" class="build-grid">
+                  <div class="grid-placeholder">빌드를 불러오는 중...</div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>포트:</label>
+                <input type="number" id="webgl-port" value="8080" min="1024" max="65535" />
+              </div>
+
+              <div class="button-row">
+                <button id="start-server" class="btn-primary">서버 시작</button>
+                <button id="stop-server" class="btn-secondary">서버 중지</button>
+              </div>
+
+              <div id="server-status" class="status-box"></div>
             </div>
-            <span class="toggle-label">설치 후 바로 실행</span>
+          </div>
+
+          <div id="message" class="message"></div>
+        </section>
+
+        <!-- ── AI view ─────────────────────────────────────────────────── -->
+        <section id="view-ai" class="view">
+          <div class="ai-header">
+            <h1>AI Helper</h1>
+            <button id="ai-refresh-btn" type="button" class="btn-ghost" title="설치된 도구 다시 검색">↻ 새로고침</button>
+          </div>
+          <p class="ai-subtitle">폴더를 VSCode에서 열고, 통합 터미널에서 설치된 AI CLI를 실행합니다.</p>
+
+          <div class="section">
+            <label class="field-label">폴더</label>
+            <div class="folder-row">
+              <input id="ai-folder-input" type="text" placeholder="선택된 폴더 없음" readonly />
+              <button id="ai-pick-btn" type="button" class="btn-secondary btn-inline">찾아보기…</button>
+            </div>
+            <ul id="ai-recent-list" class="recent"></ul>
+          </div>
+
+          <div class="section">
+            <label class="field-label">AI 도구</label>
+            <div id="ai-tools" class="tool-list"></div>
+          </div>
+
+          <label class="ai-checkbox">
+            <input id="ai-autorun" type="checkbox" checked />
+            <span>열 때 VSCode 터미널에서 선택한 도구 자동 실행
+              <small>(<code>.vscode/tasks.json</code>에 folderOpen 태스크를 추가하고
+              VSCode의 <code>task.allowAutomaticTasks</code>를 한 번 켜서 CLI가 자동 시작됩니다)</small>
+            </span>
           </label>
 
-          <button id="install-apk" class="btn-primary">APK 설치</button>
+          <button id="ai-open-btn" type="button" class="btn-primary" disabled>VSCode에서 열기</button>
 
-          <div id="install-progress-container" class="progress-container" style="display: none;">
-            <div class="progress-bar">
-              <div id="install-progress-bar" class="progress-fill"></div>
-            </div>
-            <div id="install-progress-text" class="progress-text">준비 중...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- iOS Tab -->
-      <div id="ios" class="tab-content">
-        <div class="section">
-          <h2>iOS Xcode 프로젝트</h2>
-
-          <div class="form-group">
-            <div class="card-section-header">
-              <label>프로젝트 선택:</label>
-              <button id="refresh-ios" class="btn-icon" title="프로젝트 새로고침">↻</button>
-            </div>
-            <div id="ios-grid" class="build-grid">
-              <div class="grid-placeholder">프로젝트를 불러오는 중...</div>
-            </div>
-          </div>
-
-          <button id="open-xcode" class="btn-primary">Xcode에서 열기</button>
-        </div>
-      </div>
-
-      <!-- WebGL Tab -->
-      <div id="webgl" class="tab-content">
-        <div class="section">
-          <h2>WebGL 로컬 서버</h2>
-
-          <div class="form-group">
-            <div class="card-section-header">
-              <label>빌드 선택:</label>
-              <button id="refresh-webgl" class="btn-icon" title="빌드 새로고침">↻</button>
-            </div>
-            <div id="webgl-grid" class="build-grid">
-              <div class="grid-placeholder">빌드를 불러오는 중...</div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>포트:</label>
-            <input type="number" id="webgl-port" value="8080" min="1024" max="65535" />
-          </div>
-
-          <div class="button-row">
-            <button id="start-server" class="btn-primary">서버 시작</button>
-            <button id="stop-server" class="btn-secondary">서버 중지</button>
-          </div>
-
-          <div id="server-status" class="status-box"></div>
-        </div>
-      </div>
-
-      <div id="message" class="message"></div>
-    </main>
+          <p id="ai-status" class="ai-status" role="status"></p>
+        </section>
+      </main>
+    </div>
 
     <!-- 폴더 생성 확인 모달 -->
     <div id="folder-modal" class="modal" style="display: none;">

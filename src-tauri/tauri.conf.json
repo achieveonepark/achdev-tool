@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Unity 빌드 실행 툴",
+  "productName": "AchDev Tool",
   "version": "0.1.0",
-  "identifier": "com.percent.unity-build-tool",
+  "identifier": "com.percent.achdev-tool",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,9 +13,9 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Unity 빌드 실행 툴",
-        "width": 650,
-        "height": 550,
+        "title": "AchDev Tool",
+        "width": 820,
+        "height": 620,
         "resizable": true,
         "center": true
       }

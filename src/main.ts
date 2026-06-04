@@ -259,6 +259,31 @@ async function browsePath() {
   }
 }
 
+// ── Sidebar category switching ──────────────────────────────────────────────
+
+let aiInitialized = false;
+
+function setupSidebar() {
+  const navBtns = document.querySelectorAll<HTMLButtonElement>(".nav-btn");
+  const views = document.querySelectorAll<HTMLElement>(".view");
+
+  navBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const viewId = btn.dataset.view;
+      navBtns.forEach((b) => b.classList.remove("active"));
+      views.forEach((v) => v.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(`view-${viewId}`)?.classList.add("active");
+
+      // Lazily load AI tools the first time the AI category is opened.
+      if (viewId === "ai" && !aiInitialized) {
+        aiInitialized = true;
+        loadAiTools();
+      }
+    });
+  });
+}
+
 // ── Tab switching ─────────────────────────────────────────────────────────────
 
 function setupTabs() {
@@ -499,6 +524,303 @@ async function setupProgressListener() {
   });
 }
 
+// ── AI category (absorbed from ai-helper) ──────────────────────────────────────
+
+type ToolId = "claude" | "opencode" | "codex";
+
+interface ToolInfo {
+  id: ToolId;
+  installed: boolean;
+  configPath: string;
+  configExists: boolean;
+}
+
+interface McpEntry {
+  name: string;
+  detail: string;
+}
+
+const AI_RECENT_KEY = "ai-helper.recent";
+const AI_TOOL_KEY = "ai-helper.tool";
+const AI_AUTORUN_KEY = "ai-helper.autorun";
+const AI_MAX_RECENT = 6;
+
+let aiFolderInput: HTMLInputElement;
+let aiPickBtn: HTMLButtonElement;
+let aiOpenBtn: HTMLButtonElement;
+let aiAutorunInput: HTMLInputElement;
+let aiStatusEl: HTMLElement;
+let aiRecentList: HTMLElement;
+let aiToolsEl: HTMLElement;
+
+let aiSelectedFolder = "";
+let aiSelectedTool: ToolId | "" = (localStorage.getItem(AI_TOOL_KEY) as ToolId) || "";
+let aiTools: ToolInfo[] = [];
+
+function setAiStatus(message: string, kind: "info" | "error" | "ok" = "info") {
+  aiStatusEl.textContent = message;
+  aiStatusEl.dataset.kind = kind;
+}
+
+function aiLoadRecent(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(AI_RECENT_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function aiPushRecent(folder: string) {
+  const recent = [folder, ...aiLoadRecent().filter((f) => f !== folder)].slice(0, AI_MAX_RECENT);
+  localStorage.setItem(AI_RECENT_KEY, JSON.stringify(recent));
+  renderAiRecent();
+}
+
+function renderAiRecent() {
+  aiRecentList.innerHTML = "";
+  for (const folder of aiLoadRecent()) {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "recent-item";
+    btn.title = folder;
+    btn.textContent = folder.replace(/^.*[/\\]/, "") || folder;
+    btn.addEventListener("click", () => setAiFolder(folder));
+    li.appendChild(btn);
+    aiRecentList.appendChild(li);
+  }
+}
+
+function setAiFolder(folder: string) {
+  aiSelectedFolder = folder;
+  aiFolderInput.value = folder;
+  refreshAiOpenButton();
+}
+
+function refreshAiOpenButton() {
+  const tool = aiTools.find((t) => t.id === aiSelectedTool);
+  aiOpenBtn.disabled = !aiSelectedFolder || !tool || !tool.installed;
+}
+
+function makeAiButton(label: string, act: string, cls = "btn-secondary"): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = cls;
+  b.textContent = label;
+  b.dataset.act = act;
+  return b;
+}
+
+function renderAiTools() {
+  aiToolsEl.innerHTML = "";
+
+  // If the persisted choice isn't installed, fall back to the first installed.
+  if (!aiTools.some((t) => t.id === aiSelectedTool && t.installed)) {
+    aiSelectedTool = aiTools.find((t) => t.installed)?.id ?? "";
+  }
+
+  for (const tool of aiTools) {
+    const card = document.createElement("div");
+    card.className = "tool-card";
+    card.dataset.tool = tool.id;
+
+    const head = document.createElement("div");
+    head.className = "tool-head";
+
+    if (tool.installed) {
+      const pick = document.createElement("label");
+      pick.className = "tool-pick";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "ai-tool";
+      radio.value = tool.id;
+      radio.checked = tool.id === aiSelectedTool;
+      radio.addEventListener("change", () => {
+        aiSelectedTool = tool.id;
+        localStorage.setItem(AI_TOOL_KEY, tool.id);
+        refreshAiOpenButton();
+      });
+      const name = document.createElement("span");
+      name.className = "tool-name";
+      name.textContent = tool.id;
+      pick.append(radio, name);
+      head.appendChild(pick);
+    } else {
+      const name = document.createElement("span");
+      name.className = "tool-name muted";
+      name.textContent = tool.id;
+      head.appendChild(name);
+    }
+
+    const badge = document.createElement("span");
+    badge.className = `badge ${tool.installed ? "ok" : "bad"}`;
+    badge.textContent = tool.installed ? "설치됨" : "미설치";
+    head.appendChild(badge);
+    card.appendChild(head);
+
+    const actions = document.createElement("div");
+    actions.className = "tool-actions";
+    if (tool.installed) {
+      actions.appendChild(makeAiButton("설정 열기", "config"));
+      actions.appendChild(makeAiButton("MCP 서버", "mcp"));
+    } else {
+      actions.appendChild(makeAiButton("설치", "install", "btn-secondary install"));
+    }
+    card.appendChild(actions);
+
+    // Collapsible MCP panel (populated lazily).
+    const mcp = document.createElement("div");
+    mcp.className = "mcp-panel hidden";
+    mcp.innerHTML = `
+      <ul class="mcp-list"></ul>
+      <div class="mcp-add">
+        <input class="mcp-name" placeholder="이름 (예: filesystem)" />
+        <input class="mcp-cmd" placeholder="명령 (예: npx -y @modelcontextprotocol/server-filesystem ~)" />
+        <button type="button" class="btn-secondary" data-act="mcp-add">추가</button>
+      </div>`;
+    card.appendChild(mcp);
+
+    aiToolsEl.appendChild(card);
+  }
+
+  refreshAiOpenButton();
+}
+
+async function loadAiTools() {
+  aiTools = await invoke<ToolInfo[]>("list_tools");
+  renderAiTools();
+  const code = await invoke<boolean>("has_code");
+  if (!code) {
+    setAiStatus(
+      "안내: 'code' 명령을 찾을 수 없습니다. VSCode에서 \"Shell Command: Install 'code' command in PATH\"를 실행하세요.",
+      "error",
+    );
+  } else if (!aiTools.some((t) => t.installed)) {
+    setAiStatus("아직 설치된 AI CLI가 없습니다 — 아래 설치 버튼을 사용하세요.", "info");
+  }
+}
+
+async function renderMcpList(card: HTMLElement, tool: ToolId) {
+  const list = card.querySelector<HTMLUListElement>(".mcp-list")!;
+  list.innerHTML = `<li class="mcp-empty">불러오는 중…</li>`;
+  try {
+    const entries = await invoke<McpEntry[]>("list_mcps", { tool });
+    list.innerHTML = "";
+    if (entries.length === 0) {
+      list.innerHTML = `<li class="mcp-empty">등록된 MCP 서버가 없습니다.</li>`;
+      return;
+    }
+    for (const e of entries) {
+      const li = document.createElement("li");
+      li.className = "mcp-item";
+      const n = document.createElement("span");
+      n.className = "mcp-item-name";
+      n.textContent = e.name;
+      const d = document.createElement("span");
+      d.className = "mcp-item-detail";
+      d.textContent = e.detail;
+      d.title = e.detail;
+      li.append(n, d);
+      list.appendChild(li);
+    }
+  } catch (err) {
+    list.innerHTML = `<li class="mcp-empty">${String(err)}</li>`;
+  }
+}
+
+function setupAiToolActions() {
+  aiToolsEl.addEventListener("click", async (ev) => {
+    const btn = (ev.target as HTMLElement).closest<HTMLButtonElement>("button[data-act]");
+    if (!btn) return;
+    const card = btn.closest<HTMLElement>(".tool-card")!;
+    const tool = card.dataset.tool as ToolId;
+    const act = btn.dataset.act!;
+
+    if (act === "config") {
+      try {
+        setAiStatus(await invoke<string>("open_config", { tool }), "ok");
+      } catch (err) {
+        setAiStatus(String(err), "error");
+      }
+    } else if (act === "install") {
+      try {
+        setAiStatus(await invoke<string>("install_tool", { tool }), "info");
+      } catch (err) {
+        setAiStatus(String(err), "error");
+      }
+    } else if (act === "mcp") {
+      const panel = card.querySelector<HTMLElement>(".mcp-panel")!;
+      const willShow = panel.classList.contains("hidden");
+      panel.classList.toggle("hidden");
+      if (willShow) await renderMcpList(card, tool);
+    } else if (act === "mcp-add") {
+      const nameEl = card.querySelector<HTMLInputElement>(".mcp-name")!;
+      const cmdEl = card.querySelector<HTMLInputElement>(".mcp-cmd")!;
+      const name = nameEl.value.trim();
+      const command = cmdEl.value.trim();
+      if (!name || !command) {
+        setAiStatus("MCP 이름과 명령을 모두 입력해야 합니다.", "error");
+        return;
+      }
+      try {
+        setAiStatus(await invoke<string>("add_mcp", { tool, name, command }), "ok");
+        nameEl.value = "";
+        cmdEl.value = "";
+        await renderMcpList(card, tool);
+      } catch (err) {
+        setAiStatus(String(err), "error");
+      }
+    }
+  });
+}
+
+async function aiPickFolder() {
+  const result = await open({ directory: true, multiple: false });
+  if (typeof result === "string") setAiFolder(result);
+}
+
+async function aiOpenInVscode() {
+  if (!aiSelectedFolder || !aiSelectedTool) return;
+  aiOpenBtn.disabled = true;
+  setAiStatus("VSCode를 여는 중…", "info");
+  try {
+    const message = await invoke<string>("open_in_vscode", {
+      folder: aiSelectedFolder,
+      tool: aiSelectedTool,
+      autoRun: aiAutorunInput.checked,
+    });
+    aiPushRecent(aiSelectedFolder);
+    setAiStatus(message, "ok");
+  } catch (err) {
+    setAiStatus(String(err), "error");
+  } finally {
+    refreshAiOpenButton();
+  }
+}
+
+function setupAi() {
+  aiFolderInput = document.getElementById("ai-folder-input") as HTMLInputElement;
+  aiPickBtn = document.getElementById("ai-pick-btn") as HTMLButtonElement;
+  aiOpenBtn = document.getElementById("ai-open-btn") as HTMLButtonElement;
+  aiAutorunInput = document.getElementById("ai-autorun") as HTMLInputElement;
+  aiStatusEl = document.getElementById("ai-status") as HTMLElement;
+  aiRecentList = document.getElementById("ai-recent-list") as HTMLElement;
+  aiToolsEl = document.getElementById("ai-tools") as HTMLElement;
+
+  setupAiToolActions();
+
+  aiPickBtn.addEventListener("click", aiPickFolder);
+  aiOpenBtn.addEventListener("click", aiOpenInVscode);
+  document.getElementById("ai-refresh-btn")?.addEventListener("click", loadAiTools);
+
+  aiAutorunInput.checked = localStorage.getItem(AI_AUTORUN_KEY) !== "false";
+  aiAutorunInput.addEventListener("change", () => {
+    localStorage.setItem(AI_AUTORUN_KEY, String(aiAutorunInput.checked));
+  });
+
+  renderAiRecent();
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function initBuildPath() {
@@ -541,7 +863,9 @@ window.addEventListener("DOMContentLoaded", () => {
   iosGrid = document.getElementById("ios-grid") as HTMLElement;
   webglGrid = document.getElementById("webgl-grid") as HTMLElement;
 
+  setupSidebar();
   setupTabs();
+  setupAi();
   setupProgressListener();
 
   document.getElementById("browse-path")?.addEventListener("click", browsePath);

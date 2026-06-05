@@ -62,13 +62,20 @@ if (!commandExists("cargo") && !cargoDir) {
   process.exit(1);
 }
 
-const tauriBinary = process.platform === "win32"
+const isWindows = process.platform === "win32";
+const tauriBinary = isWindows
   ? resolve("node_modules", ".bin", "tauri.cmd")
   : resolve("node_modules", ".bin", "tauri");
 
-const result = spawnSync(tauriBinary, process.argv.slice(2), {
+// Node 18.20+/20.12+/22+ 에서는 보안 변경(CVE-2024-27980)으로 인해
+// Windows에서 .cmd/.bat 를 shell 없이 spawn 하면 EINVAL 로 즉시 실패합니다.
+// 그래서 Windows 에서는 shell 을 통해 실행하고 경로를 따옴표로 감쌉니다.
+const command = isWindows ? `"${tauriBinary}"` : tauriBinary;
+
+const result = spawnSync(command, process.argv.slice(2), {
   stdio: "inherit",
   env,
+  shell: isWindows,
 });
 
 process.exit(result.status ?? 1);

@@ -54,7 +54,12 @@ if (process.platform === "darwin" && isWindowsCrossBuild) {
 }
 
 if (extraPathEntries.length > 0) {
-  env.PATH = `${extraPathEntries.join(process.platform === "win32" ? ";" : ":")}${process.platform === "win32" ? ";" : ":"}${env.PATH ?? ""}`;
+  const sep = process.platform === "win32" ? ";" : ":";
+  // Windows 의 환경변수 키는 보통 "Path" 라서 대소문자를 무시하고 기존 키를 찾습니다.
+  // "env.PATH" 로 바로 쓰면 plain object 에서는 "Path" 를 못 찾아 PATH 가 통째로
+  // cargo 경로로 덮여 버리고(예: npm 이 사라짐) beforeBuildCommand 가 실패합니다.
+  const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path") ?? "PATH";
+  env[pathKey] = `${extraPathEntries.join(sep)}${sep}${env[pathKey] ?? ""}`;
 }
 
 if (!commandExists("cargo") && !cargoDir) {

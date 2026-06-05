@@ -1,0 +1,80 @@
+name: Release
+
+# main 브랜치에 커밋(푸시)되면 자동으로 빌드해서 GitHub Release로 배포합니다.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # 필요하면 수동으로도 실행 가능
+
+# Release 생성/수정을 위해 쓰기 권한이 필요합니다.
+permissions:
+  contents: write
+
+# 같은 브랜치에서 연속 커밋 시 이전 실행을 취소하고 최신 것만 배포합니다.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # tauri.conf.json 의 version 값을 읽어서 릴리스 태그로 사용합니다.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            args: "--target aarch64-apple-darwin"
+          - platform: windows-latest
+            target: ""
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and publish to Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v${{ needs.prepare.outputs.version }}
+          releaseName: "AchDev Tool v${{ needs.prepare.outputs.version }}"
+          releaseBody: "자동 빌드된 설치 파일입니다. 아래 Assets에서 OS에 맞는 파일을 받으세요."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

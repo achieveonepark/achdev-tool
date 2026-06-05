@@ -62,20 +62,32 @@ if (!commandExists("cargo") && !cargoDir) {
   process.exit(1);
 }
 
-const isWindows = process.platform === "win32";
-const tauriBinary = isWindows
-  ? resolve("node_modules", ".bin", "tauri.cmd")
-  : resolve("node_modules", ".bin", "tauri");
+// tauri CLI 의 JS 진입점을 node 로 직접 실행합니다.
+// node_modules/.bin/tauri.cmd 같은 .cmd 셸을 거치지 않으므로
+// Windows + Node 18.20+/20.12+/22+ 의 보안 변경(CVE-2024-27980)으로 인한
+// spawn EINVAL 문제를 원천적으로 피합니다. (CI/로컬 모두 동일하게 동작)
+const cliEntry = resolve("node_modules", "@tauri-apps", "cli", "tauri.js");
 
-// Node 18.20+/20.12+/22+ 에서는 보안 변경(CVE-2024-27980)으로 인해
-// Windows에서 .cmd/.bat 를 shell 없이 spawn 하면 EINVAL 로 즉시 실패합니다.
-// 그래서 Windows 에서는 shell 을 통해 실행하고 경로를 따옴표로 감쌉니다.
-const command = isWindows ? `"${tauriBinary}"` : tauriBinary;
+let result;
+if (existsSync(cliEntry)) {
+  result = spawnSync(process.execPath, [cliEntry, ...process.argv.slice(2)], {
+    stdio: "inherit",
+    env,
+  });
+} else {
+  // 폴백: JS 진입점을 못 찾으면 .bin 셸 스크립트를 셸을 통해 실행합니다.
+  const tauriBinary = process.platform === "win32"
+    ? resolve("node_modules", ".bin", "tauri.cmd")
+    : resolve("node_modules", ".bin", "tauri");
+  result = spawnSync(
+    process.platform === "win32" ? `"${tauriBinary}"` : tauriBinary,
+    process.argv.slice(2),
+    { stdio: "inherit", env, shell: process.platform === "win32" },
+  );
+}
 
-const result = spawnSync(command, process.argv.slice(2), {
-  stdio: "inherit",
-  env,
-  shell: isWindows,
-});
+if (result.error) {
+  console.error("tauri CLI 실행 실패:", result.error.message);
+}
 
 process.exit(result.status ?? 1);

@@ -1,4 +1,5 @@
 mod ai;
+mod deps;
 
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -1033,6 +1034,8 @@ pub fn run() {
             ai::open_in_vscode,
             ai::list_mcps,
             ai::add_mcp,
+            deps::check_dependency,
+            deps::install_dependency,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

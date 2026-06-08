@@ -1,6 +1,66 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, ask, message } from "@tauri-apps/plugin-dialog";
+
+// 외부 CLI 의존성 상태 (백엔드 deps.rs 의 DepStatus 와 1:1 대응)
+interface DepStatus {
+  id: string;
+  display_name: string;
+  installed: boolean;
+  install_cmd: string;
+  installable: boolean;
+}
+
+/**
+ * 외부 CLI 도구가 설치돼 있는지 확인하고, 없으면 "설치할까요?" 팝업을 띄운 뒤
+ * 사용자가 동의하면 설치를 시작하는 공통 헬퍼.
+ *
+ * 외부 도구가 필요한 기능에서 실행 직전에 호출하면 됩니다. 예:
+ *
+ *   if (!(await ensureDependency("libimobiledevice"))) return; // 아직 준비 안 됨
+ *   // ...idevice_id 를 쓰는 실제 작업...
+ *
+ * @returns 도구가 이미 설치돼 바로 진행해도 되면 true,
+ *          (미설치라서) 설치를 시작했거나 사용자가 취소했으면 false.
+ */
+export async function ensureDependency(id: string): Promise<boolean> {
+  let status: DepStatus;
+  try {
+    status = await invoke<DepStatus>("check_dependency", { id });
+  } catch (e) {
+    await message(String(e), { title: "도구 확인 실패", kind: "error" });
+    return false;
+  }
+
+  if (status.installed) return true;
+
+  const name = status.display_name;
+  if (!status.installable) {
+    await message(
+      `${name} 가(이) 설치되어 있지 않습니다.\n이 OS 에서는 자동 설치를 지원하지 않으니 직접 설치해주세요.`,
+      { title: "필수 도구 필요", kind: "warning" },
+    );
+    return false;
+  }
+
+  const confirmed = await ask(
+    `${name} 가(이) 설치되어 있지 않습니다.\n지금 설치할까요?\n\n설치 명령: ${status.install_cmd}`,
+    { title: "필수 도구 설치", kind: "warning", okLabel: "설치", cancelLabel: "취소" },
+  );
+  if (!confirmed) return false;
+
+  try {
+    const msg = await invoke<string>("install_dependency", { id });
+    await message(msg, { title: "설치 진행 중", kind: "info" });
+  } catch (e) {
+    await message(String(e), { title: "설치 실패", kind: "error" });
+  }
+  return false;
+}
+
+// 다른 화면/스크립트에서 호출할 수 있도록 전역에도 노출해 둡니다.
+(window as unknown as { ensureDependency: typeof ensureDependency }).ensureDependency =
+  ensureDependency;
 
 interface DeviceInfo {
   id: string;

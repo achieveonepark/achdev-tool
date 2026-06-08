@@ -9,6 +9,8 @@
     "shell:allow-open",
     "shell:allow-execute",
     "dialog:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "dialog:allow-ask",
+    "dialog:allow-message"
   ]
 }

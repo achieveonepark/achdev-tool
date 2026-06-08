@@ -96,7 +96,7 @@ fn binary_names(stem: &str) -> Vec<String> {
 
 /// Try hard to find an executable: first the augmented PATH dirs, then the
 /// process PATH itself.
-fn find_binary(stem: &str) -> Option<PathBuf> {
+pub(crate) fn find_binary(stem: &str) -> Option<PathBuf> {
     let names = binary_names(stem);
 
     for dir in extra_path_dirs() {
@@ -242,7 +242,7 @@ pub fn open_config(tool: String) -> Result<String, String> {
 
 /// Launch an OS-appropriate terminal running `cmd` so the user can watch the
 /// install (and provide any required input).
-fn run_in_terminal(cmd: &str) -> Result<(), String> {
+pub(crate) fn run_in_terminal(cmd: &str) -> Result<(), String> {
     if cfg!(target_os = "macos") {
         let escaped = cmd.replace('\\', "\\\\").replace('"', "\\\"");
         let script = format!(

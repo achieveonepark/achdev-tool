@@ -1,6 +1,6 @@
 [package]
 name = "achdev-tool"
-version = "0.1.0"
+version = "0.1.1"
 description = "AchDev Tool — Unity build runner and AI dev helper"
 authors = ["you"]
 edition = "2021"

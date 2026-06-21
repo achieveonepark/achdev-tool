@@ -322,6 +322,7 @@ async function browsePath() {
 // ── Sidebar category switching ──────────────────────────────────────────────
 
 let aiInitialized = false;
+let gitInitialized = false;
 
 function setupSidebar() {
   const navBtns = document.querySelectorAll<HTMLButtonElement>(".nav-btn");
@@ -339,6 +340,13 @@ function setupSidebar() {
       if (viewId === "ai" && !aiInitialized) {
         aiInitialized = true;
         loadAiTools();
+      }
+
+      // Git repository discovery can touch many folders, so only start it
+      // once the user actually opens the Git category.
+      if (viewId === "git" && !gitInitialized) {
+        gitInitialized = true;
+        initializeGit();
       }
     });
   });
@@ -881,6 +889,221 @@ function setupAi() {
   renderAiRecent();
 }
 
+// ── Git category ────────────────────────────────────────────────────────────
+
+interface GitRepository {
+  name: string;
+  path: string;
+  branch: string;
+  dirty: boolean;
+}
+
+interface GitUpdateResult {
+  name: string;
+  path: string;
+  status: "updated" | "up_to_date" | "skipped" | "failed";
+  message: string;
+}
+
+let gitFolderInput: HTMLInputElement;
+let gitPickBtn: HTMLButtonElement;
+let gitScanBtn: HTMLButtonElement;
+let gitUpdateAllBtn: HTMLButtonElement;
+let gitRepoList: HTMLElement;
+let gitRepoCount: HTMLElement;
+let gitStatusEl: HTMLElement;
+let gitSelectedFolder = "";
+let gitRepositories: GitRepository[] = [];
+let gitUpdateResults = new Map<string, GitUpdateResult>();
+
+function setGitStatus(message: string, kind: "info" | "error" | "ok" = "info") {
+  gitStatusEl.textContent = message;
+  gitStatusEl.dataset.kind = kind;
+}
+
+function setGitListLoading(message: string) {
+  gitRepoList.innerHTML = `<div class="grid-loading">${message}</div>`;
+}
+
+function gitResultLabel(status: GitUpdateResult["status"]): string {
+  switch (status) {
+    case "updated": return "업데이트됨";
+    case "up_to_date": return "최신";
+    case "skipped": return "건너뜀";
+    case "failed": return "실패";
+  }
+}
+
+function renderGitRepositories() {
+  gitRepoList.innerHTML = "";
+  gitRepoCount.textContent = `${gitRepositories.length}개`;
+  gitUpdateAllBtn.disabled = gitRepositories.length === 0;
+
+  if (gitRepositories.length === 0) {
+    gitRepoList.innerHTML = '<div class="grid-placeholder">GitHub 저장소가 없습니다.</div>';
+    return;
+  }
+
+  for (const repository of gitRepositories) {
+    const card = document.createElement("article");
+    card.className = "git-repo-card";
+    card.title = repository.path;
+
+    const head = document.createElement("div");
+    head.className = "git-repo-head";
+    const name = document.createElement("strong");
+    name.className = "git-repo-name";
+    name.textContent = repository.name;
+    const state = document.createElement("span");
+    state.className = `git-repo-state ${repository.dirty ? "dirty" : "clean"}`;
+    state.textContent = repository.dirty ? "변경사항 있음" : "깨끗함";
+    head.append(name, state);
+
+    const branch = document.createElement("div");
+    branch.className = "git-repo-branch";
+    branch.textContent = `⌘ ${repository.branch || "HEAD"}`;
+
+    const path = document.createElement("div");
+    path.className = "git-repo-path";
+    path.textContent = repository.path;
+
+    card.append(head, branch, path);
+
+    const result = gitUpdateResults.get(repository.path);
+    if (result) {
+      const update = document.createElement("div");
+      update.className = `git-update-status ${result.status}`;
+      update.textContent = `${gitResultLabel(result.status)} · ${result.message}`;
+      update.title = result.message;
+      card.appendChild(update);
+    }
+
+    gitRepoList.appendChild(card);
+  }
+}
+
+function setGitFolder(folder: string) {
+  gitSelectedFolder = folder;
+  gitFolderInput.value = folder;
+  gitRepositories = [];
+  gitUpdateResults.clear();
+  gitRepoCount.textContent = "0개";
+  gitUpdateAllBtn.disabled = true;
+}
+
+async function scanGitRepositories() {
+  if (!gitSelectedFolder) {
+    setGitStatus("먼저 기준 폴더를 선택해주세요.", "error");
+    return;
+  }
+
+  gitScanBtn.disabled = true;
+  gitScanBtn.classList.add("loading");
+  gitUpdateAllBtn.disabled = true;
+  gitUpdateResults.clear();
+  setGitListLoading("GitHub 저장소를 찾는 중...");
+  setGitStatus("", "info");
+
+  try {
+    gitRepositories = await invoke<GitRepository[]>("find_github_repositories", {
+      path: gitSelectedFolder,
+    });
+    renderGitRepositories();
+    setGitStatus(
+      gitRepositories.length > 0
+        ? `${gitRepositories.length}개의 GitHub 저장소를 찾았습니다.`
+        : "GitHub 저장소를 찾지 못했습니다.",
+      "info",
+    );
+  } catch (error) {
+    gitRepositories = [];
+    gitRepoList.innerHTML = '<div class="grid-placeholder">저장소를 불러오지 못했습니다.</div>';
+    gitRepoCount.textContent = "0개";
+    setGitStatus(String(error), "error");
+  } finally {
+    gitScanBtn.disabled = false;
+    gitScanBtn.classList.remove("loading");
+    gitUpdateAllBtn.disabled = gitRepositories.length === 0;
+  }
+}
+
+async function pickGitFolder() {
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "GitHub 저장소가 있는 폴더 선택",
+    });
+    if (typeof selected !== "string") return;
+
+    setGitFolder(selected);
+    await invoke("save_git_path", { path: selected });
+    await scanGitRepositories();
+  } catch (error) {
+    setGitStatus(`폴더 선택 실패: ${String(error)}`, "error");
+  }
+}
+
+async function updateAllGitRepositories() {
+  if (gitRepositories.length === 0) return;
+
+  const confirmed = await ask(
+    `${gitRepositories.length}개 저장소를 최신 상태로 업데이트할까요?\n\n로컬 변경사항이 있는 저장소와 추적 브랜치가 없는 저장소는 건너뜁니다.`,
+    { title: "GitHub 저장소 일괄 업데이트", kind: "warning", okLabel: "업데이트", cancelLabel: "취소" },
+  );
+  if (!confirmed) return;
+
+  gitUpdateAllBtn.disabled = true;
+  gitUpdateAllBtn.classList.add("loading");
+  setGitStatus("저장소를 순서대로 업데이트하는 중...", "info");
+  try {
+    const results = await invoke<GitUpdateResult[]>("update_github_repositories", {
+      paths: gitRepositories.map((repository) => repository.path),
+    });
+    gitUpdateResults = new Map(results.map((result) => [result.path, result]));
+    renderGitRepositories();
+
+    const count = (status: GitUpdateResult["status"]) =>
+      results.filter((result) => result.status === status).length;
+    const summary = [
+      count("updated") ? `${count("updated")}개 업데이트` : "",
+      count("up_to_date") ? `${count("up_to_date")}개 최신` : "",
+      count("skipped") ? `${count("skipped")}개 건너뜀` : "",
+      count("failed") ? `${count("failed")}개 실패` : "",
+    ].filter(Boolean).join(" · ");
+    setGitStatus(summary || "업데이트할 저장소가 없습니다.", count("failed") ? "error" : "ok");
+  } catch (error) {
+    setGitStatus(`일괄 업데이트 실패: ${String(error)}`, "error");
+  } finally {
+    gitUpdateAllBtn.classList.remove("loading");
+    gitUpdateAllBtn.disabled = gitRepositories.length === 0;
+  }
+}
+
+async function initializeGit() {
+  const saved = await invoke<string | null>("load_git_path").catch(() => null);
+  if (!saved) {
+    setGitStatus("GitHub 저장소가 있는 기준 폴더를 선택해주세요.", "info");
+    return;
+  }
+  setGitFolder(saved);
+  await scanGitRepositories();
+}
+
+function setupGit() {
+  gitFolderInput = document.getElementById("git-folder-input") as HTMLInputElement;
+  gitPickBtn = document.getElementById("git-pick-btn") as HTMLButtonElement;
+  gitScanBtn = document.getElementById("git-scan-btn") as HTMLButtonElement;
+  gitUpdateAllBtn = document.getElementById("git-update-all-btn") as HTMLButtonElement;
+  gitRepoList = document.getElementById("git-repo-list") as HTMLElement;
+  gitRepoCount = document.getElementById("git-repo-count") as HTMLElement;
+  gitStatusEl = document.getElementById("git-status") as HTMLElement;
+
+  gitPickBtn.addEventListener("click", pickGitFolder);
+  gitScanBtn.addEventListener("click", scanGitRepositories);
+  gitUpdateAllBtn.addEventListener("click", updateAllGitRepositories);
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function initBuildPath() {
@@ -926,6 +1149,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupSidebar();
   setupTabs();
   setupAi();
+  setupGit();
   setupProgressListener();
 
   document.getElementById("browse-path")?.addEventListener("click", browsePath);

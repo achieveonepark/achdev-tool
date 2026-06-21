@@ -499,9 +499,31 @@ pub struct MissingFolders {
     pub path: String,
 }
 
+#[derive(Serialize)]
+pub struct GitRepository {
+    pub name: String,
+    pub path: String,
+    pub branch: String,
+    pub dirty: bool,
+}
+
+#[derive(Serialize)]
+pub struct GitUpdateResult {
+    pub name: String,
+    pub path: String,
+    /// updated | up_to_date | skipped | failed
+    pub status: String,
+    pub message: String,
+}
+
 // Config file path: <app_data_dir>/build_path.txt
 fn config_file(app: &AppHandle) -> Option<PathBuf> {
     app.path().app_data_dir().ok().map(|d| d.join("build_path.txt"))
+}
+
+// Config file path: <app_data_dir>/git_path.txt
+fn git_config_file(app: &AppHandle) -> Option<PathBuf> {
+    app.path().app_data_dir().ok().map(|d| d.join("git_path.txt"))
 }
 
 #[tauri::command]
@@ -518,6 +540,25 @@ fn load_build_path(app: AppHandle) -> Option<String> {
     let file = config_file(&app)?;
     let path = std::fs::read_to_string(&file).ok()?.trim().to_string();
     if path.is_empty() || !std::path::Path::new(&path).exists() {
+        return None;
+    }
+    Some(path)
+}
+
+#[tauri::command]
+fn save_git_path(app: AppHandle, path: String) -> Result<(), String> {
+    let file = git_config_file(&app).ok_or("설정 경로를 찾을 수 없습니다.")?;
+    if let Some(parent) = file.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(&file, &path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn load_git_path(app: AppHandle) -> Option<String> {
+    let file = git_config_file(&app)?;
+    let path = std::fs::read_to_string(&file).ok()?.trim().to_string();
+    if path.is_empty() || !Path::new(&path).is_dir() {
         return None;
     }
     Some(path)
@@ -567,6 +608,241 @@ fn create_build_folders(path: String, folders: Vec<String>) -> Result<String, St
     }
 
     Ok(format!("{} 폴더가 생성되었습니다.", folders.join(", ")))
+}
+
+// Git commands
+
+fn ensure_git_available() -> Result<(), String> {
+    Command::new("git")
+        .arg("--version")
+        .output()
+        .map(|_| ())
+        .map_err(|_| "Git을 찾을 수 없습니다. Git을 설치한 뒤 다시 시도해주세요.".to_string())
+}
+
+fn git_command(repo_path: &Path, args: &[&str]) -> Result<std::process::Output, String> {
+    Command::new("git")
+        .arg("-C")
+        .arg(repo_path)
+        .args(args)
+        // Parse the few Git messages we surface consistently regardless of the
+        // operating system's locale.
+        .env("LC_ALL", "C")
+        .env("LANG", "C")
+        .output()
+        .map_err(|e| format!("Git 실행 실패: {e}"))
+}
+
+fn git_text(repo_path: &Path, args: &[&str]) -> Result<String, String> {
+    let output = git_command(repo_path, args)?;
+    if output.status.success() {
+        return Ok(String::from_utf8_lossy(&output.stdout).trim().to_string());
+    }
+
+    let message = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    Err(if message.is_empty() {
+        "Git 명령을 실행하지 못했습니다.".to_string()
+    } else {
+        message
+    })
+}
+
+fn is_git_worktree(path: &Path) -> bool {
+    let dot_git = path.join(".git");
+    dot_git.is_dir() || dot_git.is_file()
+}
+
+fn is_github_remote(remote: &str) -> bool {
+    let remote = remote.trim().to_ascii_lowercase();
+    remote.contains("github.com/") || remote.contains("github.com:")
+}
+
+fn is_ignored_git_scan_directory(name: &str) -> bool {
+    matches!(
+        name,
+        ".git"
+            | "node_modules"
+            | "target"
+            | "Library"
+            | "Temp"
+            | "Logs"
+            | "obj"
+            | "bin"
+            | "DerivedData"
+    )
+}
+
+fn inspect_github_repository(path: &Path) -> Option<GitRepository> {
+    let remote = git_text(path, &["remote", "get-url", "origin"]).ok()?;
+    if !is_github_remote(&remote) {
+        return None;
+    }
+
+    let branch = git_text(path, &["branch", "--show-current"])
+        .unwrap_or_else(|_| "HEAD".to_string());
+    let dirty = git_text(path, &["status", "--porcelain"])
+        .map(|status| !status.is_empty())
+        .unwrap_or(true);
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string());
+
+    Some(GitRepository {
+        name,
+        path: path.to_string_lossy().to_string(),
+        branch,
+        dirty,
+    })
+}
+
+fn discover_github_repositories(root: &Path) -> Vec<GitRepository> {
+    let mut repositories = Vec::new();
+    let mut directories = vec![root.to_path_buf()];
+
+    while let Some(directory) = directories.pop() {
+        if is_git_worktree(&directory) {
+            if let Some(repository) = inspect_github_repository(&directory) {
+                repositories.push(repository);
+            }
+            // A repository can contain millions of generated files. Treat it as
+            // one unit instead of walking into its working tree.
+            continue;
+        }
+
+        let Ok(entries) = std::fs::read_dir(&directory) else {
+            continue;
+        };
+
+        for entry in entries.flatten() {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            // Avoid following symbolic links, which could otherwise create a loop
+            // or scan unrelated folders outside the selected location.
+            if !file_type.is_dir() || file_type.is_symlink() {
+                continue;
+            }
+
+            let name = entry.file_name();
+            if is_ignored_git_scan_directory(&name.to_string_lossy()) {
+                continue;
+            }
+            directories.push(entry.path());
+        }
+    }
+
+    repositories.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    repositories
+}
+
+#[tauri::command]
+fn find_github_repositories(path: String) -> Result<Vec<GitRepository>, String> {
+    ensure_git_available()?;
+    let root = PathBuf::from(path);
+    if !root.is_dir() {
+        return Err("선택한 폴더를 찾을 수 없습니다.".to_string());
+    }
+    Ok(discover_github_repositories(&root))
+}
+
+fn update_github_repository(path: &Path) -> GitUpdateResult {
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string());
+    let base = || GitUpdateResult {
+        name: name.clone(),
+        path: path.to_string_lossy().to_string(),
+        status: String::new(),
+        message: String::new(),
+    };
+
+    if !is_git_worktree(path) {
+        let mut result = base();
+        result.status = "skipped".to_string();
+        result.message = "Git 저장소가 아니어서 건너뛰었습니다.".to_string();
+        return result;
+    }
+
+    if !matches!(
+        git_text(path, &["remote", "get-url", "origin"]),
+        Ok(remote) if is_github_remote(&remote)
+    ) {
+        let mut result = base();
+        result.status = "skipped".to_string();
+        result.message = "GitHub origin 원격 저장소가 아니어서 건너뛰었습니다.".to_string();
+        return result;
+    }
+
+    match git_text(path, &["status", "--porcelain"]) {
+        Ok(status) if !status.is_empty() => {
+            let mut result = base();
+            result.status = "skipped".to_string();
+            result.message = "로컬 변경사항이 있어 안전하게 건너뛰었습니다.".to_string();
+            return result;
+        }
+        Err(error) => {
+            let mut result = base();
+            result.status = "failed".to_string();
+            result.message = error;
+            return result;
+        }
+        Ok(_) => {}
+    }
+
+    // Pulling a branch with no upstream produces a confusing Git error. It is
+    // clearer to leave that repository alone until its tracking branch is set.
+    if !git_command(path, &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+    {
+        let mut result = base();
+        result.status = "skipped".to_string();
+        result.message = "추적 원격 브랜치가 없어 건너뛰었습니다.".to_string();
+        return result;
+    }
+
+    match git_command(path, &["pull", "--ff-only"]) {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut result = base();
+            if stdout.contains("Already up to date.") {
+                result.status = "up_to_date".to_string();
+                result.message = "이미 최신 상태입니다.".to_string();
+            } else {
+                result.status = "updated".to_string();
+                result.message = "업데이트되었습니다.".to_string();
+            }
+            result
+        }
+        Ok(output) => {
+            let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            let mut result = base();
+            result.status = "failed".to_string();
+            result.message = if detail.is_empty() {
+                "업데이트에 실패했습니다.".to_string()
+            } else {
+                detail
+            };
+            result
+        }
+        Err(error) => {
+            let mut result = base();
+            result.status = "failed".to_string();
+            result.message = error;
+            result
+        }
+    }
+}
+
+#[tauri::command]
+fn update_github_repositories(paths: Vec<String>) -> Result<Vec<GitUpdateResult>, String> {
+    ensure_git_available()?;
+    Ok(paths
+        .iter()
+        .map(|path| update_github_repository(Path::new(path)))
+        .collect())
 }
 
 // Android Commands
@@ -1014,9 +1290,13 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_build_path,
             load_build_path,
+            save_git_path,
+            load_git_path,
             get_current_dir,
             check_build_folders,
             create_build_folders,
+            find_github_repositories,
+            update_github_repositories,
             get_android_devices,
             get_apk_list,
             install_apk,

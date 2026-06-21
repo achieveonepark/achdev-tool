@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "achdev-tool"
-version = "0.1.1"
+version = "1.0.0"
 dependencies = [
  "dirs 5.0.1",
  "glob",

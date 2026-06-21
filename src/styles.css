@@ -123,6 +123,7 @@ body {
 
 .view .section + .section,
 .view .section + .ai-checkbox,
+.view .section + .btn-primary,
 .view .ai-checkbox + .btn-primary {
   margin-top: 16px;
 }
@@ -385,6 +386,116 @@ code {
 
 .ai-status[data-kind="error"] {
   color: #c62828;
+}
+
+/* Git view */
+.git-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.git-list-header .field-label {
+  margin-bottom: 0;
+}
+
+.git-repo-count {
+  color: #888;
+  font-size: 0.82rem;
+}
+
+.git-repo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 72px;
+}
+
+.git-repo-card {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.git-repo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.git-repo-name {
+  min-width: 0;
+  color: #222;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-repo-state,
+.git-update-status {
+  font-size: 0.74rem;
+  flex-shrink: 0;
+}
+
+.git-repo-state {
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.git-repo-state.clean {
+  color: #2e7d32;
+  background: #e8f5e9;
+}
+
+.git-repo-state.dirty {
+  color: #b26a00;
+  background: #fff3e0;
+}
+
+.git-repo-branch,
+.git-repo-path {
+  margin-top: 5px;
+  color: #777;
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-repo-branch {
+  color: #555;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.git-update-status {
+  margin-top: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-update-status.updated,
+.git-update-status.up_to_date {
+  color: #2e7d32;
+}
+
+.git-update-status.skipped {
+  color: #b26a00;
+}
+
+.git-update-status.failed {
+  color: #c62828;
+}
+
+.git-note {
+  margin: 10px 0 0;
+  color: #888;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 h1 {
@@ -1160,6 +1271,36 @@ input[type="number"] {
     background: #333;
     border-color: #444;
     color: #f0f0f0;
+  }
+
+  /* Git view */
+  .git-repo-card {
+    background: #2f2f2f;
+    border-color: #444;
+  }
+
+  .git-repo-name {
+    color: #f0f0f0;
+  }
+
+  .git-repo-branch {
+    color: #bbb;
+  }
+
+  .git-repo-path,
+  .git-repo-count,
+  .git-note {
+    color: #888;
+  }
+
+  .git-repo-state.clean {
+    background: #1b5e20;
+    color: #a5d6a7;
+  }
+
+  .git-repo-state.dirty {
+    background: #4a3315;
+    color: #ffcc80;
   }
 
   code {

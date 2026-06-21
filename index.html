@@ -19,6 +19,9 @@
         <button class="nav-btn" data-view="ai">
           <span class="nav-icon">🤖</span><span class="nav-label">AI</span>
         </button>
+        <button class="nav-btn" data-view="git">
+          <span class="nav-icon">⌘</span><span class="nav-label">Git</span>
+        </button>
       </nav>
 
       <!-- Main content area -->
@@ -168,6 +171,37 @@
           <button id="ai-open-btn" type="button" class="btn-primary" disabled>VSCode에서 열기</button>
 
           <p id="ai-status" class="ai-status" role="status"></p>
+        </section>
+
+        <!-- ── Git view ────────────────────────────────────────────────── -->
+        <section id="view-git" class="view">
+          <div class="ai-header">
+            <h1>GitHub 저장소</h1>
+            <button id="git-scan-btn" type="button" class="btn-ghost" title="저장소 다시 찾기">↻ 탐색</button>
+          </div>
+          <p class="ai-subtitle">선택한 폴더 아래의 GitHub 저장소를 찾아, 한 번에 안전하게 업데이트합니다.</p>
+
+          <div class="section">
+            <label class="field-label" for="git-folder-input">기준 폴더</label>
+            <div class="folder-row">
+              <input id="git-folder-input" type="text" placeholder="선택된 폴더 없음" readonly />
+              <button id="git-pick-btn" type="button" class="btn-secondary btn-inline">찾아보기…</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="git-list-header">
+              <label class="field-label">발견한 저장소</label>
+              <span id="git-repo-count" class="git-repo-count">0개</span>
+            </div>
+            <div id="git-repo-list" class="git-repo-list">
+              <div class="grid-placeholder">폴더를 선택하면 GitHub 저장소를 찾습니다.</div>
+            </div>
+          </div>
+
+          <button id="git-update-all-btn" type="button" class="btn-primary" disabled>모두 업데이트</button>
+          <p class="git-note">로컬 변경사항이 있거나 추적 브랜치가 없는 저장소는 건너뜁니다. 업데이트는 fast-forward만 허용합니다.</p>
+          <p id="git-status" class="ai-status" role="status"></p>
         </section>
       </main>
     </div>

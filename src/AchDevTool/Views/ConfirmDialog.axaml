@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AchDevTool.Views.ConfirmDialog"
+        Title="확인"
+        Width="420"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="24" Spacing="18">
+    <TextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="13" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="CancelButton" Classes="secondary" Content="취소" Click="OnCancel" />
+      <Button x:Name="OkButton" Classes="primary" Content="확인" Click="OnOk" />
+    </StackPanel>
+  </StackPanel>
+</Window>

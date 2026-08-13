@@ -1,0 +1,54 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:AchDevTool.Converters"
+             xmlns:vm="using:AchDevTool.ViewModels"
+             x:Class="AchDevTool.App"
+             RequestedThemeVariant="Light">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://AchDevTool/Styles/Colors.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+      <conv:EnumEqualsConverter x:Key="EnumEquals" />
+      <conv:Base64ImageConverter x:Key="Base64Image" />
+      <conv:CollectionEmptyConverter x:Key="IsEmpty" />
+
+      <DataTemplate x:Key="BuildCardTemplate" x:DataType="vm:BuildCardItemViewModel">
+        <Button Classes="card" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
+                Width="150" Margin="0,0,10,10" ToolTip.Tip="{Binding SubText}">
+          <StackPanel Spacing="8">
+            <Panel Height="40" HorizontalAlignment="Left" Width="40">
+              <Image Source="{Binding IconBase64, Converter={StaticResource Base64Image}}"
+                     IsVisible="{Binding HasIcon}" Width="36" Height="36" />
+              <Border IsVisible="{Binding NoIcon}" Width="36" Height="36"
+                      Background="{StaticResource ButtonSecondaryBgBrush}" CornerRadius="8">
+                <TextBlock Text="{Binding FallbackEmoji}" FontSize="17"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+            </Panel>
+            <TextBlock Text="{Binding AppName}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding SubText}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Button>
+      </DataTemplate>
+
+      <DataTemplate x:Key="DeviceCardTemplate" x:DataType="vm:DeviceCardItemViewModel">
+        <Button Classes="card" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
+                IsEnabled="{Binding Authorized}" Width="150" Margin="0,0,10,10">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{Binding Emoji}" FontSize="28" />
+            <TextBlock Text="{Binding DisplayName}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding SubText}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Button>
+      </DataTemplate>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://AchDevTool/Styles/AppStyles.axaml" />
+  </Application.Styles>
+
+</Application>

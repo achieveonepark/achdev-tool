@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AchDevTool.ViewModels"
+             x:Class="AchDevTool.Views.AndroidView"
+             x:DataType="vm:AndroidViewModel">
+  <ScrollViewer>
+    <Border Classes="panel">
+      <StackPanel Spacing="16">
+        <TextBlock Classes="h2" Text="Android APK 설치" Margin="0" />
+
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="연결된 디바이스:" Classes="field-label" Margin="0" />
+            <Button Grid.Column="1" Classes="icon" Content="↻" Command="{Binding RefreshDevicesCommand}" ToolTip.Tip="디바이스 새로고침" />
+          </Grid>
+          <Panel MinHeight="60">
+            <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource DeviceCardTemplate}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock Text="연결된 디바이스가 없습니다" Foreground="{StaticResource TextMutedBrush}"
+                       IsVisible="{Binding Devices.Count, Converter={StaticResource IsEmpty}}" />
+          </Panel>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="APK 선택:" Classes="field-label" Margin="0" />
+            <Button Grid.Column="1" Classes="icon" Content="↻" Command="{Binding RefreshApksCommand}" ToolTip.Tip="APK 새로고침" />
+          </Grid>
+          <Panel MinHeight="60">
+            <ItemsControl ItemsSource="{Binding Apks}" ItemTemplate="{StaticResource BuildCardTemplate}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock Text="APK 파일이 없습니다" Foreground="{StaticResource TextMutedBrush}"
+                       IsVisible="{Binding Apks.Count, Converter={StaticResource IsEmpty}}" />
+          </Panel>
+        </StackPanel>
+
+        <CheckBox Content="설치 후 바로 실행" IsChecked="{Binding LaunchAfterInstall}" />
+
+        <Button Classes="primary" Content="APK 설치" Command="{Binding InstallCommand}" HorizontalAlignment="Left" />
+
+        <StackPanel Spacing="6" IsVisible="{Binding ShowProgress}">
+          <ProgressBar Classes="install" Minimum="0" Maximum="100" Value="{Binding ProgressValue}"
+                       Classes.completed="{Binding ProgressCompleted}" Classes.error="{Binding ProgressError}" />
+          <TextBlock Text="{Binding ProgressText}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

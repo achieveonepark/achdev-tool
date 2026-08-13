@@ -1,0 +1,267 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource AppBgBrush}" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+
+  <!-- ── Headings ─────────────────────────────────────────────────────── -->
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Margin" Value="0,0,0,16" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Margin" Value="0,0,0,10" />
+  </Style>
+  <Style Selector="TextBlock.field-label">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="Margin" Value="0,0,0,6" />
+  </Style>
+  <Style Selector="TextBlock.subtitle">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="Margin" Value="0,0,0,16" />
+  </Style>
+
+  <!-- ── Buttons ──────────────────────────────────────────────────────── -->
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentHoverBrush}" />
+  </Style>
+  <Style Selector="Button.primary:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource BorderStrongBrush}" />
+  </Style>
+
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{StaticResource ButtonSecondaryBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ButtonSecondaryHoverBgBrush}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ButtonSecondaryBgBrush}" />
+  </Style>
+
+  <Style Selector="Button.icon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ButtonSecondaryBgBrush}" />
+  </Style>
+
+  <!-- Loading state: dim + non-interactive look while an async refresh runs -->
+  <Style Selector="Button.loading">
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+
+  <!-- Sidebar nav buttons -->
+  <Style Selector="Button.nav-btn">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#555555" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Margin" Value="8,2" />
+  </Style>
+  <Style Selector="Button.nav-btn:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#E0E0E0" />
+  </Style>
+  <Style Selector="Button.nav-btn.active">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- Tab buttons -->
+  <Style Selector="Button.tab-btn">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+  <Style Selector="Button.tab-btn:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#F0F0F0" />
+  </Style>
+  <Style Selector="Button.tab-btn.active">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- ── Inputs ───────────────────────────────────────────────────────── -->
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Background" Value="{StaticResource SurfaceBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="NumericUpDown">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{StaticResource SurfaceBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
+  </Style>
+
+  <!-- ── Cards (clickable grid items: device/apk/ios/webgl) ──────────────── -->
+  <Style Selector="Button.card">
+    <Setter Property="Background" Value="{StaticResource CardBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Button.card:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource CardBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
+  </Style>
+  <Style Selector="Button.card.selected /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="#EAF3FF" />
+  </Style>
+  <Style Selector="Button.card:disabled /template/ ContentPresenter">
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{StaticResource SurfaceBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="16" />
+  </Style>
+
+  <!-- ── Badges / status chips ────────────────────────────────────────── -->
+  <Style Selector="Border.badge">
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="8,3" />
+  </Style>
+  <Style Selector="Border.badge.ok">
+    <Setter Property="Background" Value="{StaticResource SuccessBgBrush}" />
+  </Style>
+  <Style Selector="Border.badge.ok TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource SuccessTextBrush}" />
+  </Style>
+  <Style Selector="Border.badge.bad">
+    <Setter Property="Background" Value="#EEEEEE" />
+  </Style>
+  <Style Selector="Border.badge.bad TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+  </Style>
+  <Style Selector="Border.badge.warn">
+    <Setter Property="Background" Value="{StaticResource WarningBgBrush}" />
+  </Style>
+  <Style Selector="Border.badge.warn TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource WarningTextBrush}" />
+  </Style>
+  <Style Selector="Border.badge TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+
+  <!-- ── Status / message banners ─────────────────────────────────────── -->
+  <Style Selector="Border.status-box">
+    <Setter Property="Background" Value="#F1F2F4" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style Selector="Border.status-box.running">
+    <Setter Property="Background" Value="{StaticResource SuccessBgBrush}" />
+  </Style>
+  <Style Selector="Border.status-box.running TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource SuccessTextBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.status-text.info">
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.status-text.ok">
+    <Setter Property="Foreground" Value="{StaticResource SuccessTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.status-text.error">
+    <Setter Property="Foreground" Value="{StaticResource ErrorTextBrush}" />
+  </Style>
+
+  <Style Selector="Border.message-banner.success">
+    <Setter Property="Background" Value="{StaticResource SuccessBgBrush}" />
+  </Style>
+  <Style Selector="Border.message-banner.success TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource SuccessTextBrush}" />
+  </Style>
+  <Style Selector="Border.message-banner.error">
+    <Setter Property="Background" Value="{StaticResource ErrorBgBrush}" />
+  </Style>
+  <Style Selector="Border.message-banner.error TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource ErrorTextBrush}" />
+  </Style>
+  <Style Selector="Border.message-banner.info">
+    <Setter Property="Background" Value="#F1F2F4" />
+  </Style>
+  <Style Selector="Border.message-banner.info TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+  </Style>
+
+  <!-- ── Progress bar ─────────────────────────────────────────────────── -->
+  <Style Selector="ProgressBar.install">
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="{StaticResource ButtonSecondaryBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="ProgressBar.install.completed">
+    <Setter Property="Foreground" Value="{StaticResource SuccessTextBrush}" />
+  </Style>
+  <Style Selector="ProgressBar.install.error">
+    <Setter Property="Foreground" Value="{StaticResource ErrorTextBrush}" />
+  </Style>
+
+  <!-- ── Misc text ────────────────────────────────────────────────────── -->
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="FontSize" Value="11.5" />
+  </Style>
+  <Style Selector="TextBlock.small-note">
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+</Styles>

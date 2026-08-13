@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AchDevTool.ViewModels"
+             x:Class="AchDevTool.Views.WebglView"
+             x:DataType="vm:WebglViewModel">
+  <ScrollViewer>
+    <Border Classes="panel">
+      <StackPanel Spacing="16">
+        <TextBlock Classes="h2" Text="WebGL 로컬 서버" Margin="0" />
+
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="빌드 선택:" Classes="field-label" Margin="0" />
+            <Button Grid.Column="1" Classes="icon" Content="↻" Command="{Binding RefreshCommand}" ToolTip.Tip="빌드 새로고침" />
+          </Grid>
+          <Panel MinHeight="60">
+            <ItemsControl ItemsSource="{Binding Builds}" ItemTemplate="{StaticResource BuildCardTemplate}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock Text="WebGL 빌드가 없습니다" Foreground="{StaticResource TextMutedBrush}"
+                       IsVisible="{Binding Builds.Count, Converter={StaticResource IsEmpty}}" />
+          </Panel>
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock Text="포트:" Classes="field-label" Margin="0" />
+          <NumericUpDown Value="{Binding Port}" Minimum="1024" Maximum="65535" FormatString="0"
+                          HorizontalAlignment="Left" Width="160" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="primary" Content="서버 시작" Command="{Binding StartServerCommand}" />
+          <Button Classes="secondary" Content="서버 중지" Command="{Binding StopServerCommand}" />
+        </StackPanel>
+
+        <Border Classes="status-box" Classes.running="{Binding IsServerRunning}" HorizontalAlignment="Left">
+          <TextBlock Text="{Binding ServerStatusText}" />
+        </Border>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:AchDevTool.Views"
+             xmlns:vm="using:AchDevTool.ViewModels"
+             x:Class="AchDevTool.Views.BuildView"
+             x:DataType="vm:BuildViewModel">
+  <Panel>
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+      <TextBlock Grid.Row="0" Classes="h1" Text="Unity 빌드" />
+
+      <!-- Build path row -->
+      <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,16">
+        <TextBlock Grid.Column="0" Text="빌드 경로:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextSecondaryBrush}" />
+        <TextBox Grid.Column="1" Text="{Binding BuildPath}" IsReadOnly="True" Margin="0,0,8,0" />
+        <Button Grid.Column="2" Classes="secondary" Content="..." Command="{Binding BrowsePathCommand}" Margin="0,0,8,0" ToolTip.Tip="폴더 선택" />
+        <Button Grid.Column="3" Classes="secondary" Content="새로고침" Command="{Binding RefreshAllCommand}" />
+      </Grid>
+
+      <!-- Tabs -->
+      <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,16">
+        <Button Classes="tab-btn"
+                Classes.active="{Binding SelectedTab, Converter={StaticResource EnumEquals}, ConverterParameter=Android}"
+                Content="Android" Command="{Binding SetTabCommand}" CommandParameter="Android" />
+        <Button Classes="tab-btn" IsVisible="{Binding ShowIosTab}"
+                Classes.active="{Binding SelectedTab, Converter={StaticResource EnumEquals}, ConverterParameter=Ios}"
+                Content="iOS" Command="{Binding SetTabCommand}" CommandParameter="Ios" />
+        <Button Classes="tab-btn"
+                Classes.active="{Binding SelectedTab, Converter={StaticResource EnumEquals}, ConverterParameter=Webgl}"
+                Content="WebGL" Command="{Binding SetTabCommand}" CommandParameter="Webgl" />
+      </StackPanel>
+
+      <!-- Tab content -->
+      <Grid Grid.Row="3">
+        <Border IsVisible="{Binding SelectedTab, Converter={StaticResource EnumEquals}, ConverterParameter=Android}">
+          <views:AndroidView DataContext="{Binding Android}" />
+        </Border>
+        <Border IsVisible="{Binding SelectedTab, Converter={StaticResource EnumEquals}, ConverterParameter=Ios}">
+          <views:IosView DataContext="{Binding Ios}" />
+        </Border>
+        <Border IsVisible="{Binding SelectedTab, Converter={StaticResource EnumEquals}, ConverterParameter=Webgl}">
+          <views:WebglView DataContext="{Binding Webgl}" />
+        </Border>
+      </Grid>
+
+      <!-- Message banner -->
+      <Border Grid.Row="4" Classes="message-banner" Margin="0,16,0,0" Padding="12,10"
+              IsVisible="{Binding HasMessage}"
+              Classes.success="{Binding MessageKind, Converter={StaticResource EnumEquals}, ConverterParameter=Success}"
+              Classes.error="{Binding MessageKind, Converter={StaticResource EnumEquals}, ConverterParameter=Error}"
+              Classes.info="{Binding MessageKind, Converter={StaticResource EnumEquals}, ConverterParameter=Info}">
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+      </Border>
+    </Grid>
+
+    <!-- Folder-creation modal -->
+    <Border IsVisible="{Binding IsFolderModalVisible}" Background="#80000000">
+      <Border Classes="panel" Width="380" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="16">
+          <TextBlock Text="빌드 폴더 생성" FontSize="15" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding ModalMessage}" TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Classes="secondary" Content="취소" Command="{Binding CancelFolderCreationCommand}" />
+            <Button Classes="primary" Content="생성" Command="{Binding ConfirmFolderCreationCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Panel>
+</UserControl>

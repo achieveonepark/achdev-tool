@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AchDevTool.ViewModels"
+             xmlns:models="using:AchDevTool.Models"
+             x:Class="AchDevTool.Views.AiView"
+             x:DataType="vm:AiViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Classes="h1" Text="AI Helper" Margin="0" />
+        <Button Grid.Column="1" Classes="ghost" Content="↻ 새로고침" Command="{Binding RefreshCommand}" />
+      </Grid>
+      <TextBlock Classes="subtitle" Text="폴더를 VSCode에서 열고, 통합 터미널에서 설치된 AI CLI를 실행합니다." Margin="0" />
+
+      <Border Classes="panel">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="field-label" Text="폴더" Margin="0" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding Folder}" IsReadOnly="True" PlaceholderText="선택된 폴더 없음" Margin="0,0,8,0" />
+            <Button Grid.Column="1" Classes="secondary" Content="찾아보기…" Command="{Binding PickFolderCommand}" />
+          </Grid>
+          <ItemsControl ItemsSource="{Binding RecentFolders}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RecentFolderItemViewModel">
+                <Button Classes="ghost" Margin="0,0,6,6" ToolTip.Tip="{Binding Path}"
+                        Content="{Binding DisplayName}"
+                        Command="{Binding PickCommand}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <StackPanel Spacing="10">
+        <TextBlock Classes="field-label" Text="AI 도구" Margin="0" />
+        <ItemsControl ItemsSource="{Binding Tools}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="10" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ToolCardViewModel">
+              <Border Classes="panel">
+                <StackPanel Spacing="10">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <RadioButton GroupName="ai-tool" IsChecked="{Binding IsChosen}" Command="{Binding ChooseCommand}" IsVisible="{Binding Installed}" />
+                      <TextBlock Text="{Binding StringId}" FontWeight="Medium" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Classes="badge" Classes.ok="{Binding Installed}" Classes.bad="{Binding NotInstalled}">
+                      <TextBlock Text="{Binding InstalledLabel}" />
+                    </Border>
+                  </Grid>
+
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="secondary" Content="설정 열기" Command="{Binding OpenConfigCommand}" IsVisible="{Binding Installed}" />
+                    <Button Classes="secondary" Content="MCP 서버" Command="{Binding ToggleMcpCommand}" IsVisible="{Binding Installed}" />
+                    <Button Classes="secondary" Content="설치" Command="{Binding InstallCommand}" IsVisible="{Binding NotInstalled}" />
+                  </StackPanel>
+
+                  <StackPanel Spacing="8" IsVisible="{Binding IsMcpPanelVisible}">
+                    <ItemsControl ItemsSource="{Binding McpEntries}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:McpEntry">
+                          <Grid ColumnDefinitions="Auto,*" Margin="0,3">
+                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="Medium" Margin="0,0,10,0" />
+                            <TextBlock Grid.Column="1" Text="{Binding Detail}" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="등록된 MCP 서버가 없습니다." Foreground="{StaticResource TextMutedBrush}"
+                               IsVisible="{Binding McpEntries.Count, Converter={StaticResource IsEmpty}}" />
+                    <Grid ColumnDefinitions="*,*,Auto">
+                      <TextBox Grid.Column="0" PlaceholderText="이름 (예: filesystem)" Text="{Binding McpNameInput}" Margin="0,0,6,0" />
+                      <TextBox Grid.Column="1" PlaceholderText="명령 (예: npx -y @modelcontextprotocol/server-filesystem ~)" Text="{Binding McpCommandInput}" Margin="0,0,6,0" />
+                      <Button Grid.Column="2" Classes="secondary" Content="추가" Command="{Binding AddMcpCommand}" />
+                    </Grid>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <CheckBox IsChecked="{Binding Autorun}">
+        <StackPanel>
+          <TextBlock Text="열 때 VSCode 터미널에서 선택한 도구 자동 실행" />
+          <TextBlock Classes="small-note"
+                     Text=".vscode/tasks.json 에 folderOpen 태스크를 추가하고 VSCode의 task.allowAutomaticTasks 를 한 번 켜서 CLI가 자동 시작됩니다" />
+        </StackPanel>
+      </CheckBox>
+
+      <Button Classes="primary" Content="VSCode에서 열기" Command="{Binding OpenInVscodeCommand}" HorizontalAlignment="Left" />
+
+      <TextBlock Classes="status-text" Text="{Binding Status}"
+                 Classes.info="{Binding StatusKind, Converter={StaticResource EnumEquals}, ConverterParameter=info}"
+                 Classes.ok="{Binding StatusKind, Converter={StaticResource EnumEquals}, ConverterParameter=ok}"
+                 Classes.error="{Binding StatusKind, Converter={StaticResource EnumEquals}, ConverterParameter=error}"
+                 TextWrapping="Wrap" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

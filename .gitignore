@@ -1,4 +1,7 @@
-node_modules/
-dist/
-src-tauri/target/
+bin/
+obj/
+publish/
+releases/
+*.user
+.vs/
 .DS_Store

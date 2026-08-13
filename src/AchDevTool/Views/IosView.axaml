@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AchDevTool.ViewModels"
+             x:Class="AchDevTool.Views.IosView"
+             x:DataType="vm:IosViewModel">
+  <ScrollViewer>
+    <Border Classes="panel">
+      <StackPanel Spacing="16">
+        <TextBlock Classes="h2" Text="iOS Xcode 프로젝트" Margin="0" />
+
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="프로젝트 선택:" Classes="field-label" Margin="0" />
+            <Button Grid.Column="1" Classes="icon" Content="↻" Command="{Binding RefreshCommand}" ToolTip.Tip="프로젝트 새로고침" />
+          </Grid>
+          <Panel MinHeight="60">
+            <ItemsControl ItemsSource="{Binding Projects}" ItemTemplate="{StaticResource BuildCardTemplate}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock Text="iOS 프로젝트가 없습니다" Foreground="{StaticResource TextMutedBrush}"
+                       IsVisible="{Binding Projects.Count, Converter={StaticResource IsEmpty}}" />
+          </Panel>
+        </StackPanel>
+
+        <Button Classes="primary" Content="Xcode에서 열기" Command="{Binding OpenXcodeCommand}" HorizontalAlignment="Left" />
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

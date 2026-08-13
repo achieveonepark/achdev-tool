@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AchDevTool.ViewModels"
+             x:Class="AchDevTool.Views.GitView"
+             x:DataType="vm:GitViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Classes="h1" Text="GitHub 저장소" Margin="0" />
+        <Button Grid.Column="1" Classes="ghost" Content="↻ 탐색" Command="{Binding ScanCommand}" />
+      </Grid>
+      <TextBlock Classes="subtitle" Text="선택한 폴더 아래의 GitHub 저장소를 찾아, 한 번에 안전하게 업데이트합니다." Margin="0" />
+
+      <Border Classes="panel">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="field-label" Text="기준 폴더" Margin="0" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding Folder}" IsReadOnly="True" PlaceholderText="선택된 폴더 없음" Margin="0,0,8,0" />
+            <Button Grid.Column="1" Classes="secondary" Content="찾아보기…" Command="{Binding PickFolderCommand}" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="field-label" Text="발견한 저장소" Margin="0" />
+          <TextBlock Grid.Column="1" Text="{Binding RepoCountText}" Foreground="{StaticResource TextMutedBrush}" />
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding Repositories}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="8" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:GitRepoRowViewModel">
+              <Border Classes="panel" Padding="14">
+                <StackPanel Spacing="4">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" />
+                    <Border Grid.Column="1" Classes="badge" Classes.ok="{Binding Clean}" Classes.warn="{Binding Dirty}">
+                      <TextBlock Text="{Binding StateLabel}" />
+                    </Border>
+                  </Grid>
+                  <TextBlock Text="{Binding BranchLabel}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" />
+                  <TextBlock Text="{Binding Path}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                  <Border IsVisible="{Binding HasUpdateResult}" Classes="badge" Margin="0,4,0,0" HorizontalAlignment="Left"
+                          Classes.ok="{Binding IsUpdated}" Classes.warn="{Binding IsSkipped}" Classes.bad="{Binding IsFailed}">
+                    <TextBlock Text="{Binding UpdateSummary}" />
+                  </Border>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="GitHub 저장소가 없습니다." Foreground="{StaticResource TextMutedBrush}"
+                   IsVisible="{Binding Repositories.Count, Converter={StaticResource IsEmpty}}" />
+      </StackPanel>
+
+      <Button Classes="primary" Content="모두 업데이트" Command="{Binding UpdateAllCommand}" HorizontalAlignment="Left" />
+      <TextBlock Classes="small-note" Text="로컬 변경사항이 있거나 추적 브랜치가 없는 저장소는 건너뜁니다. 업데이트는 fast-forward만 허용합니다." />
+
+      <TextBlock Classes="status-text" Text="{Binding Status}"
+                 Classes.info="{Binding StatusKind, Converter={StaticResource EnumEquals}, ConverterParameter=info}"
+                 Classes.ok="{Binding StatusKind, Converter={StaticResource EnumEquals}, ConverterParameter=ok}"
+                 Classes.error="{Binding StatusKind, Converter={StaticResource EnumEquals}, ConverterParameter=error}"
+                 TextWrapping="Wrap" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -39,10 +39,15 @@ jobs:
         include:
           - platform: macos-latest
             script: "./build/build-macos.sh arm64"
-            artifacts: "releases/osx-arm64/*.dmg,releases/osx-arm64/*-Portable.zip"
+            # actions/upload-artifact and softprops/action-gh-release both accept a
+            # newline-separated list of globs here (NOT comma-separated).
+            artifacts: |
+              releases/osx-arm64/*.dmg
+              releases/osx-arm64/*-Portable.zip
           - platform: windows-latest
             script: "pwsh ./build/build-windows.ps1"
-            artifacts: "releases/win-x64/*Setup.exe"
+            artifacts: |
+              releases/win-x64/*Setup.exe
 
     runs-on: ${{ matrix.platform }}
     steps:

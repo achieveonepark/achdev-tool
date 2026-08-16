@@ -66,7 +66,7 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                       <RadioButton GroupName="ai-tool" IsChecked="{Binding IsChosen}" Command="{Binding ChooseCommand}" IsVisible="{Binding CanBeChosen}" />
                       <TextBlock Text="{Binding DisplayName}" FontWeight="Medium" VerticalAlignment="Center" />
-                      <Border Classes="badge">
+                      <Border Classes="badge" VerticalAlignment="Center">
                         <TextBlock Text="{Binding KindLabel}" />
                       </Border>
                     </StackPanel>
@@ -80,7 +80,9 @@
                     </Border>
                   </Grid>
 
-                  <TextBlock Classes="small-note" Text="{Binding ConfigPath}" TextTrimming="CharacterEllipsis"
+                  <!-- NoWrap so a long path ellipsises on one line instead of stacking; full path in the tooltip. -->
+                  <TextBlock Classes="small-note" Text="{Binding ConfigPath}"
+                             TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
                              ToolTip.Tip="{Binding ConfigPath}" />
 
                   <StackPanel Orientation="Horizontal" Spacing="8">

@@ -1,0 +1,33 @@
+name: CI
+
+# main 이외의 브랜치에 푸시하거나 PR을 열면 빌드와 테스트를 돌립니다.
+# (main 은 Release 워크플로가 설치 파일까지 만들면서 검증합니다.)
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build
+        run: dotnet build AchDevTool.sln -c Release
+
+      - name: Test
+        run: dotnet test AchDevTool.sln -c Release --no-build

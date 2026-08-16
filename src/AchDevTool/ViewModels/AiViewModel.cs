@@ -15,6 +15,7 @@ public partial class AiViewModel : ObservableObject
     private bool _initialized;
 
     public ObservableCollection<ToolCardViewModel> Tools { get; } = [];
+    public ObservableCollection<ToolGroupViewModel> ToolGroups { get; } = [];
     public ObservableCollection<RecentFolderItemViewModel> RecentFolders { get; } = [];
 
     [ObservableProperty]
@@ -36,7 +37,12 @@ public partial class AiViewModel : ObservableObject
     private bool isOpening;
 
     public bool CanOpen => !IsOpening && Folder.Length > 0 &&
-        Tools.FirstOrDefault(t => t.Id == SelectedToolId) is { Installed: true };
+        Tools.FirstOrDefault(t => t.Id == SelectedToolId) is { CanBeChosen: true };
+
+    /// <summary>Only an installed CLI can be auto-run in VSCode's terminal — desktop clients
+    /// are listed for their setup status but cannot be the selected tool.</summary>
+    private static bool IsSelectable(ToolInfo info)
+        => info.Installed && AiToolsService.MetaOf(info.Id).Kind == ToolKind.Cli;
 
     public async Task EnsureInitializedAsync()
     {
@@ -60,10 +66,10 @@ public partial class AiViewModel : ObservableObject
     {
         var infos = await Task.Run(() => _aiToolsService.ListTools());
 
-        // If the persisted choice isn't installed, fall back to the first installed tool.
-        if (SelectedToolId is null || infos.FirstOrDefault(t => t.Id == SelectedToolId) is not { Installed: true })
+        // If the persisted choice isn't a usable CLI, fall back to the first installed one.
+        if (SelectedToolId is null || infos.FirstOrDefault(t => t.Id == SelectedToolId) is not { } current || !IsSelectable(current))
         {
-            SelectedToolId = infos.FirstOrDefault(t => t.Installed)?.Id;
+            SelectedToolId = infos.FirstOrDefault(IsSelectable)?.Id;
         }
 
         Tools.Clear();
@@ -76,14 +82,26 @@ public partial class AiViewModel : ObservableObject
             Tools.Add(card);
         }
 
+        ToolGroups.Clear();
+        foreach (var group in Tools.GroupBy(t => t.Product))
+        {
+            ToolGroups.Add(new ToolGroupViewModel(AiToolsService.ProductName(group.Key), group));
+        }
+
         var hasCode = await Task.Run(() => _aiToolsService.HasCode());
         if (!hasCode)
         {
             SetStatus("안내: 'code' 명령을 찾을 수 없습니다. VSCode에서 \"Shell Command: Install 'code' command in PATH\"를 실행하세요.", "error");
         }
-        else if (!infos.Any(t => t.Installed))
+        else if (!infos.Any(IsSelectable))
         {
             SetStatus("아직 설치된 AI CLI가 없습니다 — 아래 설치 버튼을 사용하세요.", "info");
+        }
+        else if (infos.Any(t => t.Installed && !t.Configured))
+        {
+            var names = infos.Where(t => t.Installed && !t.Configured)
+                .Select(t => AiToolsService.MetaOf(t.Id).DisplayName);
+            SetStatus($"설치됐지만 설정이 비어 있습니다: {string.Join(", ", names)}", "info");
         }
 
         OnPropertyChanged(nameof(CanOpen));

@@ -10,25 +10,47 @@ namespace AchDevTool.Services;
 /// Ported from the Tauri app's ai.rs (absorbed from the standalone "ai-helper" app).</summary>
 public sealed class AiToolsService
 {
-    public sealed record ToolMeta(ToolId Id, string StringId, string Bin, string Npm);
+    public sealed record ToolMeta(
+        ToolId Id,
+        string StringId,
+        ToolProduct Product,
+        ToolKind Kind,
+        string DisplayName,
+        ConfigFormat ConfigFormat,
+        string Bin = "",
+        string Npm = "",
+        bool SupportsMcp = false,
+        bool HasEditableConfig = true,
+        string DownloadUrl = "");
 
+    /// <summary>Listed in display order: each product's CLI first, then its desktop client.</summary>
     public static readonly ToolMeta[] Tools =
     [
-        new(ToolId.Claude, "claude", "claude", "@anthropic-ai/claude-code"),
-        new(ToolId.Opencode, "opencode", "opencode", "opencode-ai"),
-        new(ToolId.Codex, "codex", "codex", "@openai/codex"),
+        new(ToolId.Claude, "claude", ToolProduct.Claude, ToolKind.Cli, "Claude Code CLI",
+            ConfigFormat.Json, Bin: "claude", Npm: "@anthropic-ai/claude-code", SupportsMcp: true),
+        new(ToolId.ClaudeDesktop, "claude-desktop", ToolProduct.Claude, ToolKind.Desktop, "Claude 데스크톱 앱",
+            ConfigFormat.Json, SupportsMcp: true, DownloadUrl: "https://claude.ai/download"),
+        new(ToolId.Codex, "codex", ToolProduct.Codex, ToolKind.Cli, "Codex CLI",
+            ConfigFormat.Toml, Bin: "codex", Npm: "@openai/codex", SupportsMcp: true),
+        new(ToolId.ChatGptDesktop, "chatgpt-desktop", ToolProduct.Codex, ToolKind.Desktop, "ChatGPT 데스크톱 앱",
+            ConfigFormat.Directory, HasEditableConfig: false, DownloadUrl: "https://openai.com/chatgpt/download/"),
+        new(ToolId.Opencode, "opencode", ToolProduct.Opencode, ToolKind.Cli, "opencode CLI",
+            ConfigFormat.Json, Bin: "opencode", Npm: "opencode-ai", SupportsMcp: true),
     ];
 
     public static ToolMeta MetaOf(ToolId id) => Tools.First(t => t.Id == id);
 
     public static string StringIdOf(ToolId id) => MetaOf(id).StringId;
 
-    public static ToolId? ParseToolId(string id) => id switch
+    public static ToolId? ParseToolId(string id)
+        => Tools.FirstOrDefault(t => t.StringId == id)?.Id;
+
+    public static string ProductName(ToolProduct product) => product switch
     {
-        "claude" => ToolId.Claude,
-        "opencode" => ToolId.Opencode,
-        "codex" => ToolId.Codex,
-        _ => null,
+        ToolProduct.Claude => "Claude",
+        ToolProduct.Codex => "Codex",
+        ToolProduct.Opencode => "opencode",
+        _ => product.ToString(),
     };
 
     /// <summary>Directories likely to contain user-installed CLIs, so a GUI-launched app
@@ -104,37 +126,174 @@ public sealed class AiToolsService
         return null;
     }
 
-    /// <summary>Resolve the on-disk config file for a tool, per-OS conventions.</summary>
+    /// <summary>Locations a product's desktop client is installed to, per-OS. macOS entries are
+    /// <c>.app</c> bundles (directories), Windows entries are executables.</summary>
+    private static IEnumerable<string> DesktopAppPaths(ToolId id)
+    {
+        var home = AppPaths.HomeDir;
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        if (id == ToolId.ClaudeDesktop)
+        {
+            if (PlatformUtils.IsMacOS)
+            {
+                yield return "/Applications/Claude.app";
+                yield return Path.Combine(home, "Applications", "Claude.app");
+            }
+            else if (PlatformUtils.IsWindows)
+            {
+                yield return Path.Combine(localAppData, "AnthropicClaude", "claude.exe");
+                yield return Path.Combine(localAppData, "Programs", "Claude", "Claude.exe");
+            }
+        }
+        else if (id == ToolId.ChatGptDesktop)
+        {
+            if (PlatformUtils.IsMacOS)
+            {
+                yield return "/Applications/ChatGPT.app";
+                yield return Path.Combine(home, "Applications", "ChatGPT.app");
+            }
+            else if (PlatformUtils.IsWindows)
+            {
+                yield return Path.Combine(localAppData, "Programs", "ChatGPT", "ChatGPT.exe");
+            }
+        }
+    }
+
+    public static bool IsInstalled(ToolId id)
+    {
+        var meta = MetaOf(id);
+        return meta.Kind == ToolKind.Cli
+            ? FindBinary(meta.Bin) is not null
+            : DesktopAppPaths(id).Any(p => Directory.Exists(p) || File.Exists(p));
+    }
+
+    /// <summary>Resolve the on-disk config for a tool, per-OS conventions. For entries with no
+    /// user-editable config this is the app's data directory instead of a file.</summary>
     public static string ConfigPath(ToolId id)
     {
         var home = AppPaths.HomeDir;
         return id switch
         {
             ToolId.Claude => Path.Combine(home, ".claude", "settings.json"),
-            ToolId.Opencode => Path.Combine(OpencodeConfigBase(), "opencode", "opencode.json"),
+            ToolId.Opencode => Path.Combine(XdgConfigBase(), "opencode", "opencode.json"),
             ToolId.Codex => Path.Combine(home, ".codex", "config.toml"),
+            ToolId.ClaudeDesktop => ClaudeDesktopConfigPath(),
+            ToolId.ChatGptDesktop => ChatGptDataDir(),
             _ => throw new ArgumentOutOfRangeException(nameof(id)),
         };
     }
 
-    private static string OpencodeConfigBase()
+    private static string XdgConfigBase()
         => Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") is { Length: > 0 } xdg
             ? xdg
             : Path.Combine(AppPaths.HomeDir, ".config");
 
+    /// <summary>Claude Desktop keeps its MCP servers here (separate from the CLI's settings).</summary>
+    private static string ClaudeDesktopConfigPath()
+    {
+        const string file = "claude_desktop_config.json";
+
+        if (PlatformUtils.IsWindows)
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(appData, "Claude", file);
+        }
+
+        if (PlatformUtils.IsMacOS)
+        {
+            return Path.Combine(AppPaths.HomeDir, "Library", "Application Support", "Claude", file);
+        }
+
+        return Path.Combine(XdgConfigBase(), "Claude", file);
+    }
+
+    private static string ChatGptDataDir()
+    {
+        if (PlatformUtils.IsWindows)
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(appData, "ChatGPT");
+        }
+
+        if (PlatformUtils.IsMacOS)
+        {
+            return Path.Combine(AppPaths.HomeDir, "Library", "Application Support", "com.openai.chat");
+        }
+
+        return Path.Combine(XdgConfigBase(), "ChatGPT");
+    }
+
     private static string ConfigTemplate(ToolId id) => id switch
     {
         ToolId.Claude => "{\n  \n}\n",
+        ToolId.ClaudeDesktop => "{\n  \n}\n",
         ToolId.Opencode => "{\n  \"$schema\": \"https://opencode.ai/config.json\"\n}\n",
         ToolId.Codex => "# Codex configuration (https://github.com/openai/codex)\n",
         _ => "",
     };
 
+    /// <summary>Whether a tool has actually been set up, as opposed to merely having a config file.
+    /// An empty file or a bare <c>{}</c> — which is exactly what our own "설정 열기" button creates —
+    /// must not count as configured.</summary>
+    public static bool IsConfigured(ToolId id)
+        => HasMeaningfulConfig(ConfigPath(id), MetaOf(id).ConfigFormat);
+
+    internal static bool HasMeaningfulConfig(string path, ConfigFormat format) => format switch
+    {
+        ConfigFormat.Directory => DirectoryHasEntries(path),
+        ConfigFormat.Json => ReadJsonc(path) is JsonObject o && o.Count > 0,
+        ConfigFormat.Toml => HasTomlContent(path),
+        _ => false,
+    };
+
+    private static bool DirectoryHasEntries(string path)
+    {
+        try
+        {
+            return Directory.Exists(path) && Directory.EnumerateFileSystemEntries(path).Any();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>True when the TOML file has at least one line that is not blank or a comment.</summary>
+    private static bool HasTomlContent(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            foreach (var raw in File.ReadLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length > 0 && !line.StartsWith('#'))
+                {
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
     public List<ToolInfo> ListTools()
         => Tools.Select(t =>
         {
             var cfg = ConfigPath(t.Id);
-            return new ToolInfo(t.Id, FindBinary(t.Bin) is not null, cfg, File.Exists(cfg));
+            var exists = t.ConfigFormat == ConfigFormat.Directory
+                ? Directory.Exists(cfg)
+                : File.Exists(cfg);
+            return new ToolInfo(t.Id, IsInstalled(t.Id), cfg, exists, IsConfigured(t.Id));
         }).ToList();
 
     public bool HasCode() => FindBinary("code") is not null;
@@ -178,6 +337,13 @@ public sealed class AiToolsService
 
     public string OpenConfig(ToolId tool)
     {
+        var meta = MetaOf(tool);
+        if (!meta.HasEditableConfig)
+        {
+            throw new InvalidOperationException(
+                $"{meta.DisplayName}은(는) 편집할 수 있는 설정 파일이 없습니다. 앱 안에서 설정하세요.");
+        }
+
         var path = ConfigPath(tool);
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir))
@@ -244,9 +410,17 @@ public sealed class AiToolsService
     public string InstallTool(ToolId tool)
     {
         var meta = MetaOf(tool);
+
+        // Desktop clients are not npm packages — send the user to the official download page.
+        if (meta.Kind == ToolKind.Desktop)
+        {
+            PlatformUtils.OpenWithSystem(meta.DownloadUrl);
+            return $"{meta.DisplayName} 다운로드 페이지를 열었습니다: {meta.DownloadUrl}";
+        }
+
         var cmd = $"npm install -g {meta.Npm}";
         RunInTerminal(cmd);
-        return $"Installing {meta.StringId} in a terminal: `{cmd}`. Click Refresh when it finishes.";
+        return $"터미널에서 {meta.DisplayName} 설치 중: `{cmd}`. 끝나면 새로고침을 누르세요.";
     }
 
     /// <summary>Merges an auto-run task into a (possibly existing) .vscode/tasks.json, preserving
@@ -362,7 +536,13 @@ public sealed class AiToolsService
     public string OpenInVscode(string folder, ToolId tool, bool autoRun)
     {
         var meta = MetaOf(tool);
-        var toolBin = FindBinary(meta.Bin) ?? throw new InvalidOperationException($"{meta.StringId} is not installed.");
+        if (meta.Kind != ToolKind.Cli)
+        {
+            throw new InvalidOperationException(
+                $"{meta.DisplayName}은(는) 터미널에서 실행할 수 없습니다. CLI를 선택하세요.");
+        }
+
+        var toolBin = FindBinary(meta.Bin) ?? throw new InvalidOperationException($"{meta.DisplayName}이(가) 설치되어 있지 않습니다.");
 
         if (!Directory.Exists(folder))
         {

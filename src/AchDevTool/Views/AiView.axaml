@@ -36,32 +36,57 @@
         </StackPanel>
       </Border>
 
-      <StackPanel Spacing="10">
+      <StackPanel Spacing="14">
         <TextBlock Classes="field-label" Text="AI 도구" Margin="0" />
-        <ItemsControl ItemsSource="{Binding Tools}">
+        <ItemsControl ItemsSource="{Binding ToolGroups}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <StackPanel Spacing="10" />
+              <StackPanel Spacing="16" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ToolGroupViewModel">
+              <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Summary}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <ItemsControl ItemsSource="{Binding Items}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Spacing="10" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ToolCardViewModel">
               <Border Classes="panel">
                 <StackPanel Spacing="10">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid ColumnDefinitions="*,Auto,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                      <RadioButton GroupName="ai-tool" IsChecked="{Binding IsChosen}" Command="{Binding ChooseCommand}" IsVisible="{Binding Installed}" />
-                      <TextBlock Text="{Binding StringId}" FontWeight="Medium" VerticalAlignment="Center" />
+                      <RadioButton GroupName="ai-tool" IsChecked="{Binding IsChosen}" Command="{Binding ChooseCommand}" IsVisible="{Binding CanBeChosen}" />
+                      <TextBlock Text="{Binding DisplayName}" FontWeight="Medium" VerticalAlignment="Center" />
+                      <Border Classes="badge">
+                        <TextBlock Text="{Binding KindLabel}" />
+                      </Border>
                     </StackPanel>
-                    <Border Grid.Column="1" Classes="badge" Classes.ok="{Binding Installed}" Classes.bad="{Binding NotInstalled}">
+                    <Border Grid.Column="1" Margin="0,0,6,0" Classes="badge"
+                            Classes.ok="{Binding Configured}" Classes.warn="{Binding NotConfigured}"
+                            IsVisible="{Binding ShowConfigured}">
+                      <TextBlock Text="{Binding ConfiguredLabel}" />
+                    </Border>
+                    <Border Grid.Column="2" Classes="badge" Classes.ok="{Binding Installed}" Classes.bad="{Binding NotInstalled}">
                       <TextBlock Text="{Binding InstalledLabel}" />
                     </Border>
                   </Grid>
 
+                  <TextBlock Classes="small-note" Text="{Binding ConfigPath}" TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding ConfigPath}" />
+
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Classes="secondary" Content="설정 열기" Command="{Binding OpenConfigCommand}" IsVisible="{Binding Installed}" />
-                    <Button Classes="secondary" Content="MCP 서버" Command="{Binding ToggleMcpCommand}" IsVisible="{Binding Installed}" />
-                    <Button Classes="secondary" Content="설치" Command="{Binding InstallCommand}" IsVisible="{Binding NotInstalled}" />
+                    <Button Classes="secondary" Content="설정 열기" Command="{Binding OpenConfigCommand}" IsVisible="{Binding CanOpenConfig}" />
+                    <Button Classes="secondary" Content="MCP 서버" Command="{Binding ToggleMcpCommand}" IsVisible="{Binding CanShowMcp}" />
+                    <Button Classes="secondary" Content="{Binding InstallLabel}" Command="{Binding InstallCommand}" IsVisible="{Binding NotInstalled}" />
                   </StackPanel>
 
                   <StackPanel Spacing="8" IsVisible="{Binding IsMcpPanelVisible}">
@@ -85,6 +110,10 @@
                   </StackPanel>
                 </StackPanel>
               </Border>
+            </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

@@ -131,4 +131,83 @@ public class AiToolsServiceTests
             Assert.True(Path.IsPathRooted(path));
         }
     }
+
+    [Fact]
+    public void EveryToolHasADistinctStringIdThatRoundTrips()
+    {
+        var ids = AiToolsService.Tools.Select(t => t.StringId).ToList();
+        Assert.Equal(ids.Count, ids.Distinct().Count());
+
+        foreach (var tool in AiToolsService.Tools)
+        {
+            Assert.Equal(tool.Id, AiToolsService.ParseToolId(tool.StringId));
+        }
+
+        Assert.Null(AiToolsService.ParseToolId("not-a-tool"));
+    }
+
+    /// <summary>A CLI must have an npm package to install; a desktop client must have a
+    /// download page instead, since it is not an npm package.</summary>
+    [Fact]
+    public void CliAndDesktopEntriesCarryTheirOwnInstallRoute()
+    {
+        foreach (var tool in AiToolsService.Tools)
+        {
+            if (tool.Kind == ToolKind.Cli)
+            {
+                Assert.NotEqual("", tool.Bin);
+                Assert.NotEqual("", tool.Npm);
+            }
+            else
+            {
+                Assert.NotEqual("", tool.DownloadUrl);
+            }
+        }
+    }
+
+    [Fact]
+    public void EmptyOrTemplateConfigsDoNotCountAsConfigured()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"aih-cfg-{Environment.ProcessId}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var json = Path.Combine(dir, "settings.json");
+
+            // Missing entirely.
+            Assert.False(AiToolsService.HasMeaningfulConfig(json, ConfigFormat.Json));
+
+            // The exact template our own "설정 열기" button writes must not read as configured.
+            File.WriteAllText(json, "{\n  \n}\n");
+            Assert.False(AiToolsService.HasMeaningfulConfig(json, ConfigFormat.Json));
+
+            File.WriteAllText(json, "{}");
+            Assert.False(AiToolsService.HasMeaningfulConfig(json, ConfigFormat.Json));
+
+            File.WriteAllText(json, """{ "model": "opus" }""");
+            Assert.True(AiToolsService.HasMeaningfulConfig(json, ConfigFormat.Json));
+
+            var toml = Path.Combine(dir, "config.toml");
+            Assert.False(AiToolsService.HasMeaningfulConfig(toml, ConfigFormat.Toml));
+
+            File.WriteAllText(toml, "# Codex configuration (https://github.com/openai/codex)\n\n");
+            Assert.False(AiToolsService.HasMeaningfulConfig(toml, ConfigFormat.Toml));
+
+            File.WriteAllText(toml, "# comment\nmodel = \"o3\"\n");
+            Assert.True(AiToolsService.HasMeaningfulConfig(toml, ConfigFormat.Toml));
+
+            var dataDir = Path.Combine(dir, "appdata");
+            Assert.False(AiToolsService.HasMeaningfulConfig(dataDir, ConfigFormat.Directory));
+
+            Directory.CreateDirectory(dataDir);
+            Assert.False(AiToolsService.HasMeaningfulConfig(dataDir, ConfigFormat.Directory));
+
+            File.WriteAllText(Path.Combine(dataDir, "state"), "x");
+            Assert.True(AiToolsService.HasMeaningfulConfig(dataDir, ConfigFormat.Directory));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
 }

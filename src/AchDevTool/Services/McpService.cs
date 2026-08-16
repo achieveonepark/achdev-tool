@@ -19,15 +19,23 @@ public sealed class McpService
         ToolId.Claude => Path.Combine(AppPaths.HomeDir, ".claude.json"),
         ToolId.Opencode => AiToolsService.ConfigPath(ToolId.Opencode),
         ToolId.Codex => AiToolsService.ConfigPath(ToolId.Codex),
+        // The desktop client keeps its own MCP list, separate from the CLI's.
+        ToolId.ClaudeDesktop => AiToolsService.ConfigPath(ToolId.ClaudeDesktop),
         _ => throw new ArgumentOutOfRangeException(nameof(id)),
     };
 
     public List<McpEntry> ListMcps(ToolId tool)
     {
+        if (!AiToolsService.MetaOf(tool).SupportsMcp)
+        {
+            return [];
+        }
+
         var path = McpPath(tool);
         return tool switch
         {
             ToolId.Claude => ListJsonMcps(path, "mcpServers"),
+            ToolId.ClaudeDesktop => ListJsonMcps(path, "mcpServers"),
             ToolId.Opencode => ListJsonMcps(path, "mcp"),
             ToolId.Codex => ListCodexMcps(path),
             _ => [],
@@ -36,6 +44,12 @@ public sealed class McpService
 
     public string AddMcp(ToolId tool, string name, string command)
     {
+        var meta = AiToolsService.MetaOf(tool);
+        if (!meta.SupportsMcp)
+        {
+            throw new InvalidOperationException($"{meta.DisplayName}은(는) MCP 서버 등록을 지원하지 않습니다.");
+        }
+
         name = name.Trim();
         if (name.Length == 0)
         {
@@ -48,6 +62,7 @@ public sealed class McpService
         switch (tool)
         {
             case ToolId.Claude:
+            case ToolId.ClaudeDesktop:
                 AddJsonMcp(path, "mcpServers", name, new JsonObject
                 {
                     ["command"] = prog,
@@ -72,7 +87,7 @@ public sealed class McpService
                 break;
         }
 
-        return $"Registered MCP '{name}' for {AiToolsService.StringIdOf(tool)} in {path}";
+        return $"{meta.DisplayName}에 MCP '{name}'을(를) 등록했습니다: {path}";
     }
 
     private static (string Prog, List<string> Args) Tokenize(string command)

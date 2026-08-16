@@ -22,15 +22,38 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      release_exists: ${{ steps.existing.outputs.release_exists }}
     steps:
       - uses: actions/checkout@v4
+
       - id: version
         shell: bash
         run: |
           VERSION=$(grep -oP '(?<=<Version>)[^<]+' src/AchDevTool/AchDevTool.csproj | head -1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=app-v$VERSION" >> "$GITHUB_OUTPUT"
           echo "Resolved version: $VERSION"
 
+      # 이미 게시된 릴리스는 건드리지 않습니다.
+      # (게시된 릴리스를 수정하려 하면 GITHUB_TOKEN 에 contents:write 가 있어도
+      #  "Resource not accessible by integration" 403 으로 거부될 수 있습니다.
+      #  새 버전을 배포하려면 csproj 의 <Version> 을 올리세요.)
+      - id: existing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::릴리스 $TAG 가 이미 존재하므로 배포 단계를 건너뜁니다. 새로 배포하려면 src/AchDevTool/AchDevTool.csproj 의 <Version> 을 올리세요."
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # 설치 파일을 만들어 워크플로 아티팩트로 올립니다.
+  # 배포(Release 업로드)와 분리해 두었기 때문에, 배포가 막혀 있어도 빌드 결과물은 항상 받을 수 있습니다.
   build:
     needs: prepare
     strategy:
@@ -39,8 +62,7 @@ jobs:
         include:
           - platform: macos-latest
             script: "./build/build-macos.sh arm64"
-            # actions/upload-artifact and softprops/action-gh-release both accept a
-            # newline-separated list of globs here (NOT comma-separated).
+            # actions/upload-artifact 는 줄바꿈으로 구분된 glob 목록을 받습니다(콤마 아님).
             artifacts: |
               releases/osx-arm64/*.dmg
               releases/osx-arm64/*-Portable.zip
@@ -62,21 +84,38 @@ jobs:
         shell: bash
         run: ${{ matrix.script }}
 
-      # GitHub Release 업로드가 저장소 권한 설정 때문에 실패하더라도(Settings → Actions →
-      # General → Workflow permissions 가 read-only인 경우) 이 아티팩트로 바로 받을 수 있습니다.
-      - name: Upload build artifact (fallback download)
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform }}
           path: ${{ matrix.artifacts }}
           if-no-files-found: error
 
-      - name: Upload to Release
+  # 양쪽 빌드가 끝난 뒤 한 번만 실행해서 릴리스를 만듭니다.
+  # (예전처럼 두 빌드 잡이 각자 같은 릴리스를 동시에 수정하지 않도록 분리했습니다.)
+  release:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.release_exists == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: installer-*
+          merge-multiple: true
+
+      - name: List files to publish
+        shell: bash
+        run: ls -lR dist
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: app-v${{ needs.prepare.outputs.version }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
           name: "AchDev Tool v${{ needs.prepare.outputs.version }}"
           body: "자동 빌드된 설치 파일입니다. 아래 Assets에서 OS에 맞는 파일을 받으세요."
           draft: false
           prerelease: false
-          files: ${{ matrix.artifacts }}
+          files: dist/*
+          fail_on_unmatched_files: true

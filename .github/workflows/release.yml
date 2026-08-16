@@ -80,8 +80,14 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # macOS 서명/공증용 값입니다. 비어 있으면 지금까지처럼 서명 없이 빌드합니다.
+      # (CI에서 실제로 서명하려면 인증서를 러너 키체인에 먼저 import 해야 합니다.)
       - name: Build installer
         shell: bash
+        env:
+          MAC_SIGN_IDENTITY: ${{ secrets.MAC_SIGN_IDENTITY }}
+          MAC_INSTALL_IDENTITY: ${{ secrets.MAC_INSTALL_IDENTITY }}
+          MAC_NOTARY_PROFILE: ${{ secrets.MAC_NOTARY_PROFILE }}
         run: ${{ matrix.script }}
 
       - name: Upload build artifact

@@ -51,7 +51,7 @@ dotnet test
 
 설치 파일은 **빌드하는 운영체제에서 만드는 것이 가장 안정적**입니다 (Velopack 자체 제약).
 아래 스크립트가 `dotnet publish` → `vpk pack`(Velopack CLI) → (macOS는) `.dmg` 변환까지 자동으로 처리합니다.
-버전은 `src/AchDevTool/AchDevTool.csproj`의 `<Version>` 값(현재 `1.0.0`)을 그대로 사용합니다.
+버전은 `src/AchDevTool/AchDevTool.csproj`의 `<Version>` 값을 그대로 사용합니다.
 
 ### 공통 준비
 
@@ -91,6 +91,21 @@ Xcode Command Line Tools가 필요합니다 (`xcode-select --install`).
 - `.dmg`를 열어서 앱을 `Applications`로 드래그
 - 또는 `.zip`을 풀어서 `.app`을 바로 실행
 
+#### "앱이 손상되었기 때문에 열 수 없습니다"가 뜰 때
+
+현재 배포되는 설치 파일은 **코드 서명과 notarization이 되어 있지 않습니다.**
+그래서 인터넷에서 받은 `.dmg`/`.zip`에는 macOS가 격리(quarantine) 속성을 붙이고,
+Gatekeeper가 이를 "손상됨"으로 표시하며 실행을 막습니다. 앱이 실제로 깨진 것은 아닙니다.
+
+`Applications`로 옮긴 뒤 아래 명령으로 격리 속성을 지우면 정상 실행됩니다.
+
+```bash
+xattr -dr com.apple.quarantine /Applications/AchDevTool.app
+```
+
+이 경고를 아예 없애려면 Apple Developer 계정(연 $99)으로 Developer ID 서명과
+notarization을 해야 합니다. 아래 "서명 관련 참고"를 보세요.
+
 ## 빌드 산출물 위치
 
 - 퍼블리시 결과물: `publish/<rid>/`
@@ -103,10 +118,36 @@ GitHub Release(`app-v<version>`)에 자동으로 올립니다.
 
 ## 서명 관련 참고
 
-현재 설정은 로컬 설치와 테스트용 기준입니다.
+현재 배포물은 서명되어 있지 않습니다.
 
-- macOS: 코드 서명과 notarization을 하지 않으면 외부 배포 시 Gatekeeper 경고가 뜰 수 있습니다.
-- Windows: 서명되지 않은 설치 파일은 SmartScreen 경고가 뜰 수 있습니다.
+- **macOS**: 서명/notarization이 없으면 다운로드한 앱은 "손상되었습니다"로 차단됩니다
+  (위 [설치 안내](#앱이-손상되었기-때문에-열-수-없습니다가-뜰-때) 참고).
+- **Windows**: 서명되지 않은 설치 파일은 SmartScreen 경고가 뜹니다.
+
+### macOS 서명/공증 설정하기
+
+Apple Developer 계정이 있다면 아래 환경 변수를 채우고 빌드하면
+`build/build-macos.sh`가 `vpk`에 서명·공증 옵션을 넘겨줍니다.
+
+```bash
+export MAC_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)"
+export MAC_INSTALL_IDENTITY="Developer ID Installer: Your Name (TEAMID)"   # .pkg 서명용
+export MAC_NOTARY_PROFILE="achdev-notary"
+
+./build/build-macos.sh
+```
+
+`MAC_NOTARY_PROFILE`은 미리 한 번 만들어 둬야 합니다.
+
+```bash
+xcrun notarytool store-credentials "achdev-notary" \
+  --apple-id "you@example.com" --team-id "TEAMID" --password "<앱 암호>"
+```
+
+GitHub Actions에서 서명하려면 같은 이름의 저장소 시크릿
+(`MAC_SIGN_IDENTITY`, `MAC_INSTALL_IDENTITY`, `MAC_NOTARY_PROFILE`)을 등록하고,
+러너 키체인에 인증서를 import하는 단계를 워크플로에 추가해야 합니다.
+시크릿이 비어 있으면 지금처럼 서명 없이 빌드합니다.
 
 ## 참고 문서
 

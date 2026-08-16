@@ -29,5 +29,6 @@ jobs:
       - name: Build
         run: dotnet build AchDevTool.sln -c Release
 
+      # TreatNoTestsAsError 가 없으면 테스트가 하나도 발견되지 않아도 통과로 나옵니다.
       - name: Test
-        run: dotnet test AchDevTool.sln -c Release --no-build
+        run: dotnet test AchDevTool.sln -c Release --no-build -- RunConfiguration.TreatNoTestsAsError=true

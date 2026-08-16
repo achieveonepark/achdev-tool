@@ -12,9 +12,9 @@
     <AssemblyName>AchDevTool</AssemblyName>
     <RootNamespace>AchDevTool</RootNamespace>
     <Product>AchDev Tool</Product>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
     <Description>AchDev Tool — Unity build runner and AI dev helper</Description>
 
     <InvariantGlobalization>true</InvariantGlobalization>
